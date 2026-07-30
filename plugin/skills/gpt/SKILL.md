@@ -1,5 +1,5 @@
 ---
-name: gpt-image
+name: gpt
 description: "Génération et édition d'images via GPT Image MCP (OpenAI gpt-image-2) : texte exact dans l'image, maquettes UI, affiches, composition multi-images, retouche haute fidélité. Triggers: image avec du texte, affiche, poster, maquette, mockup, bannière typographiée, composer plusieurs images, retoucher en préservant."
 user-invocable: true
 ---
@@ -15,7 +15,7 @@ Ce que ce serveur fait mieux que nanobanana : **le texte rendu dans l'image est 
 ## Comportement général
 
 **Délégation obligatoire via sous-agent :**
-- **Ne JAMAIS appeler les tools `mcp__plugin_agence-image_gpt-image__*` directement** dans le contexte principal
+- **Ne JAMAIS appeler les tools `mcp__plugin_erom-image_gpt__*` directement** dans le contexte principal
 - Toujours déléguer via le **Task tool** avec `subagent_type: "general-purpose"` pour protéger la fenêtre de contexte
 - Le sous-agent doit : charger le tool via `ToolSearch`, appeler le tool MCP, et retourner uniquement le résultat (chemin du fichier généré, succès/erreur)
 - La réponse de l'outil est un bloc texte dont la ligne utile est `📁 Saved to: <chemin>` : le sous-agent en extrait le chemin et ne remonte que lui, jamais le bloc entier
@@ -31,19 +31,19 @@ Ce que ce serveur fait mieux que nanobanana : **le texte rendu dans l'image est 
 
 ---
 
-## Routage gpt-image vs nanobanana
+## Routage GPT Image vs nanobanana
 
-| Prends `gpt-image` quand | Prends `nanobanana` quand |
+| Prends `gpt` quand | Prends `nanobanana` quand |
 |--------------------------|---------------------------|
 | Du texte exact doit apparaître dans l'image (slogan, titre, étiquette, label d'UI) | L'image ne porte pas de texte, ou du lettrage décoratif illisible suffit |
 | Maquette d'interface : écran d'app, dashboard, composant avec libellés | Icône à sortir en plusieurs tailles d'un coup (`nanobanana_icon`) |
 | Affiche, poster, couverture, mise en page typographique | Diagramme technique structuré (`nanobanana_diagram`) |
 | Composition de plusieurs images sources en une seule (jusqu'à 16 entrées) | Itération rapide et bon marché, exploration en volume |
-| Retouche devant préserver identité, géométrie, cadrage, lumière | Ratio au-delà de 3:1 : `8:1`, `4:1`, `1:4`, `1:8` (gpt-image plafonne à 3:1) |
+| Retouche devant préserver identité, géométrie, cadrage, lumière | Ratio au-delà de 3:1 : `8:1`, `4:1`, `1:4`, `1:8` (GPT Image plafonne à 3:1) |
 | Photo produit, packshot, rendu commercial crédible | Fond transparent souhaité, sachant que nanobanana ne le garantit pas non plus |
-| Inpainting : remplacer une zone précise via un masque | Sortie au-delà de `2560x1440` : gpt-image accepte jusqu'à `3840x2160`, mais c'est au-dessus de son plafond de fiabilité conseillé |
+| Inpainting : remplacer une zone précise via un masque | Sortie au-delà de `2560x1440` : GPT Image accepte jusqu'à `3840x2160`, mais c'est au-dessus de son plafond de fiabilité conseillé |
 
-**`21:9` n'est pas un motif de routage :** il vaut 2,3333:1, donc sous le plafond de 3:1. Une bannière 21:9 portant un slogan exact reste un cas gpt-image (`2688x1152`).
+**`21:9` n'est pas un motif de routage :** il vaut 2,3333:1, donc sous le plafond de 3:1. Une bannière 21:9 portant un slogan exact reste un cas GPT Image (`2688x1152`).
 
 **Cas mixte fréquent :** visuel riche dont le rendu graphique prime, avec du texte exact ajouté ensuite → nanobanana pour la base, puis `gpt_image_edit` pour incruster le texte.
 

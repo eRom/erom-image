@@ -1,17 +1,17 @@
-# agence-image
+# erom-image
 
 Deux serveurs MCP de génération d'images, et les skills qui les pilotent.
 
 | Serveur | Modèle | Points forts |
 |---|---|---|
 | `nanobanana` | Gemini (nano-banana-2 / pro) | images, icônes multi-tailles, diagrammes techniques, itération rapide |
-| `gpt-image` | OpenAI `gpt-image-2` | texte exact dans l'image, maquettes UI, composition multi-images, édition haute fidélité |
+| `gpt` | OpenAI `gpt-image-2` | texte exact dans l'image, maquettes UI, composition multi-images, édition haute fidélité |
 
 ## Prérequis
 
 - `node` ≥ 18 (les serveurs sont distribués sous forme de bundles autonomes)
 - `GEMINI_API_KEY` dans l'environnement, pour le serveur nanobanana
-- `OPENAI_API_KEY` dans l'environnement, pour le serveur gpt-image
+- `OPENAI_API_KEY` dans l'environnement, pour le serveur `gpt`
 
 Chaque serveur démarre indépendamment : une seule des deux clés suffit pour utiliser le serveur correspondant.
 
@@ -19,7 +19,7 @@ Chaque serveur démarre indépendamment : une seule des deux clés suffit pour u
 
 ```bash
 /plugin marketplace add eRom/erom-marketplace
-/plugin install agence-image@erom-marketplace
+/plugin install erom-image@erom-marketplace
 ```
 
 ## Outils exposés
@@ -27,7 +27,7 @@ Chaque serveur démarre indépendamment : une seule des deux clés suffit pour u
 - `gpt_image_generate`, `gpt_image_edit`
 - `nanobanana_generate`, `nanobanana_edit`, `nanobanana_icon`, `nanobanana_diagram`
 
-Les skills `gpt-image` et `nanobanana` décrivent quand utiliser lequel, et comment rédiger les prompts.
+Les skills `gpt` et `nanobanana` décrivent quand utiliser lequel, et comment rédiger les prompts.
 
 ## Coûts
 

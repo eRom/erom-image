@@ -1,7 +1,7 @@
-# erom-agence-image
+# erom-image
 
-Repo de développement du plugin Claude Code **agence-image** : deux serveurs MCP de génération
-d'images (nanobanana/Gemini, gpt-image/OpenAI) et leurs skills.
+Repo de développement du plugin Claude Code **erom-image** : deux serveurs MCP de génération
+d'images (nanobanana/Gemini, gpt/OpenAI) et leurs skills.
 
 Seul le sous-dossier [`plugin/`](./plugin) est distribué, via la source `git-subdir` de
 [erom-marketplace](https://github.com/eRom/erom-marketplace).

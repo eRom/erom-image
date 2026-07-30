@@ -13,7 +13,7 @@ Tu as accès à **Nano Banana**, un serveur MCP de génération d'images aliment
 ## Comportement général
 
 **Délégation obligatoire via sous-agent :**
-- **Ne JAMAIS appeler les tools `mcp__plugin_agence-image_nanobanana__*` directement** dans le contexte principal
+- **Ne JAMAIS appeler les tools `mcp__plugin_erom-image_nanobanana__*` directement** dans le contexte principal
 - Toujours déléguer via le **Task tool** avec `subagent_type: "general-purpose"` pour protéger la fenêtre de contexte
 - Le sous-agent doit : charger le tool via `ToolSearch`, appeler le tool MCP, et retourner uniquement le résultat (chemin du fichier généré, succès/erreur)
 - Le prompt du sous-agent doit contenir tous les paramètres nécessaires (prompt, output_dir, style, etc.)
