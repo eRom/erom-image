@@ -1404,17 +1404,23 @@ Expected: 2 outils puis 4 outils, comme dans le dépôt.
 C'est le test qui exerce le manifeste, la découverte des skills et la résolution de `${CLAUDE_PLUGIN_ROOT}` par le vrai chargeur de plugins.
 
 ```bash
-cd /tmp && claude --plugin-dir /Users/recarnot/dev/erom-agence-image/plugin --debug -p "Réponds uniquement: OK" 2>&1 | tee /tmp/agence-image-load.log | tail -5
+cd /tmp && claude --plugin-dir /Users/recarnot/dev/erom-agence-image/plugin \
+  --debug-file /tmp/agence-image-load.log -p "Réponds uniquement: OK" | tail -3
 ```
 
-Expected: la sortie se termine par `OK`, sans erreur de chargement de plugin. Puis, dans le journal :
+`--debug-file` plutôt que `--debug` : ce dernier n'écrit rien d'exploitable sur stdout ici.
+
+Expected: la réponse est `OK`. Puis, dans le journal, **chercher le signal positif** plutôt que l'absence du mot « error » :
 
 ```bash
-grep -ciE 'nanobanana|gpt-image' /tmp/agence-image-load.log
-grep -iE 'error|failed|cannot find|ENOENT' /tmp/agence-image-load.log | grep -iE 'plugin|mcp|nanobanana|gpt-image' || echo "aucune erreur de plugin"
+grep -c 'Successfully connected' /tmp/agence-image-load.log
+grep -oE 'plugin:agence-image:[a-z-]+' /tmp/agence-image-load.log | sort -u
+grep -iE 'ENOENT|cannot find module|failed to (start|connect|load)|plugin .* not found' /tmp/agence-image-load.log || echo "aucun échec de chargement"
 ```
 
-Expected: le premier compte est non nul (les deux serveurs sont vus par le chargeur), le second n'affiche aucune erreur liée au plugin.
+Expected: au moins 2 connexions réussies, les deux serveurs `plugin:agence-image:nanobanana` et `plugin:agence-image:gpt-image` listés, et aucun échec de chargement.
+
+Ne pas chercher le mot `error` seul : `claude --debug` étiquette `[ERROR]` **tout** ce qu'un serveur MCP écrit sur stderr, y compris ses bannières de démarrage réussi (`🎨 GPT Image MCP Server running via stdio`). Un grep sur `error` produit donc des faux positifs garantis.
 
 Si le chargement échoue pour une raison d'environnement (quota, réseau), ne pas maquiller : reporter l'échec tel quel et laisser l'étape non validée.
 
