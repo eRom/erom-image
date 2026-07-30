@@ -222,7 +222,7 @@ Fichier `servers/gpt-image/src/constants.test.ts` :
 import { expect, test } from "bun:test";
 import { DEFAULT_MODEL, MODELS, validateSize } from "./constants.js";
 
-test("le modèle par défaut est gpt-image-2 et les modèles dépréciés sont absents", () => {
+test("defaults to gpt-image-2 and excludes deprecated models", () => {
   expect(DEFAULT_MODEL).toBe("gpt-image-2");
   expect(MODELS).toContain("gpt-image-2");
   expect(MODELS).not.toContain("chatgpt-image-latest");
@@ -230,36 +230,36 @@ test("le modèle par défaut est gpt-image-2 et les modèles dépréciés sont a
   expect(MODELS).not.toContain("gpt-image-1-mini");
 });
 
-test("accepte les presets", () => {
+test("accepts size presets", () => {
   for (const preset of ["auto", "1024x1024", "1536x1024", "1024x1536", "2048x2048"]) {
     expect(validateSize(preset)).toBe(preset);
   }
 });
 
-test("accepte les tailles custom valides", () => {
+test("accepts valid custom sizes", () => {
   expect(validateSize("2560x1440")).toBe("2560x1440");
-  expect(validateSize("3072x1024")).toBe("3072x1024"); // ratio exactement 3:1
-  expect(validateSize("3840x2160")).toBe("3840x2160"); // maximum documenté, 8 294 400 px pile
+  expect(validateSize("3072x1024")).toBe("3072x1024"); // exactly 3:1
+  expect(validateSize("3840x2160")).toBe("3840x2160"); // documented maximum, exactly 8,294,400 px
 });
 
-test("rejette les bords non multiples de 16", () => {
+test("rejects edges that are not multiples of 16", () => {
   expect(() => validateSize("1000x1000")).toThrow("multiples of 16");
 });
 
-test("rejette les bords au-delà de 3840", () => {
+test("rejects edges beyond 3840", () => {
   expect(() => validateSize("4096x1600")).toThrow("must not exceed 3840px");
 });
 
-test("rejette un ratio supérieur à 3:1", () => {
+test("rejects aspect ratios beyond 3:1", () => {
   expect(() => validateSize("3072x512")).toThrow("aspect ratio");
 });
 
-test("rejette les tailles hors bornes de pixels", () => {
+test("rejects sizes outside the pixel bounds", () => {
   expect(() => validateSize("512x512")).toThrow("total pixels"); // 262 144 < 655 360
-  expect(() => validateSize("3824x3824")).toThrow("total pixels"); // 14,6 Mpx > 8,29 Mpx
+  expect(() => validateSize("3824x3824")).toThrow("total pixels"); // 14.6 Mpx > 8.29 Mpx
 });
 
-test("rejette une syntaxe invalide", () => {
+test("rejects invalid syntax", () => {
   expect(() => validateSize("1024*1024")).toThrow("Invalid size");
   expect(() => validateSize("big")).toThrow("Invalid size");
 });
@@ -452,8 +452,8 @@ beforeAll(() => {
 
 afterAll(() => server.stop(true));
 
-// Forme réelle d'une réponse gpt-image : b64_json seul dans data[], pas d'url,
-// pas de revised_prompt (dall-e-3 uniquement), usage à 4 champs.
+// Real gpt-image response shape: b64_json only in data[], no url,
+// no revised_prompt (dall-e-3 only), usage with 4 fields.
 const okPayload = {
   created: 1_770_000_000,
   data: [{ b64_json: PNG_1X1_B64 }],
@@ -475,7 +475,7 @@ function writeFixtureImage(name: string): string {
   return p;
 }
 
-test("generateImage : POST JSON sur /images/generations, champs non définis omis", async () => {
+test("generateImage: POSTs JSON to /images/generations, omitting undefined fields", async () => {
   const { generateImage } = await import("./openai.js");
   nextStatus = 200;
   nextPayload = okPayload;
@@ -505,7 +505,7 @@ test("generateImage : POST JSON sur /images/generations, champs non définis omi
   expect(result.usage).toEqual(okPayload.usage);
 });
 
-test("editImage : multipart avec image[] répété, mask, et champs optionnels", async () => {
+test("editImage: multipart with repeated image[], mask and optional fields", async () => {
   const { editImage } = await import("./openai.js");
   nextStatus = 200;
   nextPayload = okPayload;
@@ -541,10 +541,10 @@ test("editImage : multipart avec image[] répété, mask, et champs optionnels",
   expect(f).not.toHaveProperty("size");
 });
 
-test("erreur API : message et code relayés", async () => {
+test("API error: message and code are relayed", async () => {
   const { generateImage } = await import("./openai.js");
   nextStatus = 400;
-  // Réponse réelle capturée sur l'API le 2026-07-30.
+  // Real response captured from the API on 2026-07-30.
   nextPayload = {
     error: {
       message: "Billing hard limit has been reached.",
@@ -559,9 +559,9 @@ test("erreur API : message et code relayés", async () => {
   ).rejects.toThrow("OpenAI API 400 (billing_hard_limit_reached): Billing hard limit has been reached.");
 });
 
-test("erreur de modération : pas de message, moderation_details exploités", async () => {
+test("moderation error: no message field, moderation_details used instead", async () => {
   const { formatApiError } = await import("./openai.js");
-  // Forme documentée, spécifique aux endpoints images (pas de champ message).
+  // Documented shape, specific to the image endpoints (no message field).
   const moderationError = {
     error: {
       type: "image_generation_user_error",
@@ -575,12 +575,12 @@ test("erreur de modération : pas de message, moderation_details exploités", as
   );
 });
 
-test("erreur sans corps JSON : repli sur le statusText", async () => {
+test("error without a JSON body: falls back to statusText", async () => {
   const { formatApiError } = await import("./openai.js");
   expect(formatApiError(502, null, "Bad Gateway")).toBe("OpenAI API 502: Bad Gateway");
 });
 
-test("réponse sans image : erreur explicite", async () => {
+test("response without an image: explicit error", async () => {
   const { generateImage } = await import("./openai.js");
   nextStatus = 200;
   nextPayload = { created: 1, data: [] };
@@ -590,14 +590,14 @@ test("réponse sans image : erreur explicite", async () => {
   ).rejects.toThrow("No image data in the API response");
 });
 
-test("image d'entrée absente : erreur avant tout appel réseau", async () => {
+test("missing input image: fails before any network call", async () => {
   const { editImage } = await import("./openai.js");
   expect(
     editImage([path.join(tmpDir, "ghost.png")], "x", { model: "gpt-image-2" })
   ).rejects.toThrow("Input image not found");
 });
 
-test("generateFilename : slug, extension et préfixe", async () => {
+test("generateFilename: slug, extension and prefix", async () => {
   const { generateFilename, extensionFor } = await import("./openai.js");
   expect(generateFilename("A Red Apple, on White!", "jpeg")).toMatch(/^gptimage_a_red_apple_on_\d+\.jpg$/);
   expect(generateFilename("x", "png", "gptimage_edit")).toMatch(/^gptimage_edit_x_\d+\.png$/);
