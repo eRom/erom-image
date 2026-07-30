@@ -139,11 +139,13 @@ Expected: exit 0, aucune sortie.
 
 - [ ] **Step 5: Écrire `scripts/mcp-handshake.sh`**
 
+Commentaires en anglais, comme tout le code du repo (contrainte globale).
+
 ```bash
 #!/usr/bin/env bash
-# Liste les tools exposés par un serveur MCP stdio, via un handshake JSON-RPC minimal.
-# Usage: scripts/mcp-handshake.sh <chemin/vers/bundle.js>
-# Les variables d'environnement (clés API) sont héritées de l'appelant.
+# List the tools exposed by a stdio MCP server, through a minimal JSON-RPC handshake.
+# Usage: scripts/mcp-handshake.sh <path/to/bundle.js>
+# Environment variables (API keys) are inherited from the caller.
 set -euo pipefail
 
 BUNDLE="${1:?usage: mcp-handshake.sh <bundle.js>}"
@@ -220,7 +222,7 @@ Fichier `servers/gpt-image/src/constants.test.ts` :
 import { expect, test } from "bun:test";
 import { DEFAULT_MODEL, MODELS, validateSize } from "./constants.js";
 
-test("le modèle par défaut est gpt-image-2 et les modèles dépréciés sont absents", () => {
+test("defaults to gpt-image-2 and excludes deprecated models", () => {
   expect(DEFAULT_MODEL).toBe("gpt-image-2");
   expect(MODELS).toContain("gpt-image-2");
   expect(MODELS).not.toContain("chatgpt-image-latest");
@@ -228,36 +230,36 @@ test("le modèle par défaut est gpt-image-2 et les modèles dépréciés sont a
   expect(MODELS).not.toContain("gpt-image-1-mini");
 });
 
-test("accepte les presets", () => {
+test("accepts size presets", () => {
   for (const preset of ["auto", "1024x1024", "1536x1024", "1024x1536", "2048x2048"]) {
     expect(validateSize(preset)).toBe(preset);
   }
 });
 
-test("accepte les tailles custom valides", () => {
+test("accepts valid custom sizes", () => {
   expect(validateSize("2560x1440")).toBe("2560x1440");
-  expect(validateSize("3072x1024")).toBe("3072x1024"); // ratio exactement 3:1
-  expect(validateSize("3840x2160")).toBe("3840x2160"); // maximum documenté, 8 294 400 px pile
+  expect(validateSize("3072x1024")).toBe("3072x1024"); // exactly 3:1
+  expect(validateSize("3840x2160")).toBe("3840x2160"); // documented maximum, exactly 8,294,400 px
 });
 
-test("rejette les bords non multiples de 16", () => {
+test("rejects edges that are not multiples of 16", () => {
   expect(() => validateSize("1000x1000")).toThrow("multiples of 16");
 });
 
-test("rejette les bords au-delà de 3840", () => {
+test("rejects edges beyond 3840", () => {
   expect(() => validateSize("4096x1600")).toThrow("must not exceed 3840px");
 });
 
-test("rejette un ratio supérieur à 3:1", () => {
+test("rejects aspect ratios beyond 3:1", () => {
   expect(() => validateSize("3072x512")).toThrow("aspect ratio");
 });
 
-test("rejette les tailles hors bornes de pixels", () => {
+test("rejects sizes outside the pixel bounds", () => {
   expect(() => validateSize("512x512")).toThrow("total pixels"); // 262 144 < 655 360
-  expect(() => validateSize("3824x3824")).toThrow("total pixels"); // 14,6 Mpx > 8,29 Mpx
+  expect(() => validateSize("3824x3824")).toThrow("total pixels"); // 14.6 Mpx > 8.29 Mpx
 });
 
-test("rejette une syntaxe invalide", () => {
+test("rejects invalid syntax", () => {
   expect(() => validateSize("1024*1024")).toThrow("Invalid size");
   expect(() => validateSize("big")).toThrow("Invalid size");
 });
@@ -450,8 +452,8 @@ beforeAll(() => {
 
 afterAll(() => server.stop(true));
 
-// Forme réelle d'une réponse gpt-image : b64_json seul dans data[], pas d'url,
-// pas de revised_prompt (dall-e-3 uniquement), usage à 4 champs.
+// Real gpt-image response shape: b64_json only in data[], no url,
+// no revised_prompt (dall-e-3 only), usage with 4 fields.
 const okPayload = {
   created: 1_770_000_000,
   data: [{ b64_json: PNG_1X1_B64 }],
@@ -473,7 +475,7 @@ function writeFixtureImage(name: string): string {
   return p;
 }
 
-test("generateImage : POST JSON sur /images/generations, champs non définis omis", async () => {
+test("generateImage: POSTs JSON to /images/generations, omitting undefined fields", async () => {
   const { generateImage } = await import("./openai.js");
   nextStatus = 200;
   nextPayload = okPayload;
@@ -503,7 +505,7 @@ test("generateImage : POST JSON sur /images/generations, champs non définis omi
   expect(result.usage).toEqual(okPayload.usage);
 });
 
-test("editImage : multipart avec image[] répété, mask, et champs optionnels", async () => {
+test("editImage: multipart with repeated image[], mask and optional fields", async () => {
   const { editImage } = await import("./openai.js");
   nextStatus = 200;
   nextPayload = okPayload;
@@ -539,10 +541,10 @@ test("editImage : multipart avec image[] répété, mask, et champs optionnels",
   expect(f).not.toHaveProperty("size");
 });
 
-test("erreur API : message et code relayés", async () => {
+test("API error: message and code are relayed", async () => {
   const { generateImage } = await import("./openai.js");
   nextStatus = 400;
-  // Réponse réelle capturée sur l'API le 2026-07-30.
+  // Real response captured from the API on 2026-07-30.
   nextPayload = {
     error: {
       message: "Billing hard limit has been reached.",
@@ -557,9 +559,9 @@ test("erreur API : message et code relayés", async () => {
   ).rejects.toThrow("OpenAI API 400 (billing_hard_limit_reached): Billing hard limit has been reached.");
 });
 
-test("erreur de modération : pas de message, moderation_details exploités", async () => {
+test("moderation error: no message field, moderation_details used instead", async () => {
   const { formatApiError } = await import("./openai.js");
-  // Forme documentée, spécifique aux endpoints images (pas de champ message).
+  // Documented shape, specific to the image endpoints (no message field).
   const moderationError = {
     error: {
       type: "image_generation_user_error",
@@ -573,12 +575,12 @@ test("erreur de modération : pas de message, moderation_details exploités", as
   );
 });
 
-test("erreur sans corps JSON : repli sur le statusText", async () => {
+test("error without a JSON body: falls back to statusText", async () => {
   const { formatApiError } = await import("./openai.js");
   expect(formatApiError(502, null, "Bad Gateway")).toBe("OpenAI API 502: Bad Gateway");
 });
 
-test("réponse sans image : erreur explicite", async () => {
+test("response without an image: explicit error", async () => {
   const { generateImage } = await import("./openai.js");
   nextStatus = 200;
   nextPayload = { created: 1, data: [] };
@@ -588,14 +590,14 @@ test("réponse sans image : erreur explicite", async () => {
   ).rejects.toThrow("No image data in the API response");
 });
 
-test("image d'entrée absente : erreur avant tout appel réseau", async () => {
+test("missing input image: fails before any network call", async () => {
   const { editImage } = await import("./openai.js");
   expect(
     editImage([path.join(tmpDir, "ghost.png")], "x", { model: "gpt-image-2" })
   ).rejects.toThrow("Input image not found");
 });
 
-test("generateFilename : slug, extension et préfixe", async () => {
+test("generateFilename: slug, extension and prefix", async () => {
   const { generateFilename, extensionFor } = await import("./openai.js");
   expect(generateFilename("A Red Apple, on White!", "jpeg")).toMatch(/^gptimage_a_red_apple_on_\d+\.jpg$/);
   expect(generateFilename("x", "png", "gptimage_edit")).toMatch(/^gptimage_edit_x_\d+\.png$/);
@@ -1366,42 +1368,67 @@ ni étape de build.
 MIT
 ```
 
-- [ ] **Step 6: Test d'installation local**
+- [ ] **Step 6: Vérifier ce que `git-subdir` livrerait réellement**
 
-Créer une marketplace temporaire pointant sur le repo local :
+L'installation par la marketplace clone le dépôt et n'en extrait que le sous-dossier `plugin/`. Ce test reproduit cette extraction sans passer par le client, à partir du dernier commit de la branche : il faut donc avoir committé l'étape 7 avant, ou relancer ce test après.
 
 ```bash
-mkdir -p /tmp/agence-image-e2e/.claude-plugin
-cat > /tmp/agence-image-e2e/.claude-plugin/marketplace.json <<'EOF'
-{
-  "name": "e2e-local",
-  "owner": { "name": "e2e", "email": "e2e@local" },
-  "plugins": [
-    {
-      "name": "agence-image",
-      "source": {
-        "source": "git-subdir",
-        "url": "file:///Users/recarnot/dev/erom-agence-image",
-        "path": "plugin",
-        "ref": "main"
-      },
-      "description": "E2E local",
-      "version": "0.1.0"
-    }
-  ]
-}
-EOF
+DEST=/tmp/agence-image-subdir && mkdir -p "$DEST"
+git archive --format=tar HEAD:plugin | tar -x -C "$DEST"
+find "$DEST" -type f | sed "s|$DEST/||" | sort
 ```
 
-Puis, dans Claude Code : `/plugin marketplace add /tmp/agence-image-e2e` et `/plugin install agence-image@e2e-local`.
+Expected: exactement cette liste, ni plus ni moins.
 
-Expected: le cache `~/.claude/plugins/cache/e2e-local/agence-image/0.1.0/` contient `.claude-plugin/`, `.mcp.json`, `skills/`, `servers/` et **rien d'autre** (ni `docs/`, ni `servers/*/src`), et `/mcp` liste `nanobanana` et `gpt-image`.
+```
+.claude-plugin/plugin.json
+.mcp.json
+README.md
+servers/gpt-image/dist/index.js
+servers/nanobanana/dist/index.js
+skills/gpt-image/SKILL.md
+skills/nanobanana/SKILL.md
+```
 
-Si `file://` n'est pas accepté comme source `git-subdir`, noter le repli : l'E2E réel se fera après le push de la tâche 7, et cette étape est marquée comme non exécutée plutôt que validée.
+Aucun `docs/`, aucun `servers/*/src`, aucun `node_modules`, aucun `package.json`. Vérifier ensuite que les bundles extraits fonctionnent hors du dépôt :
 
-Nettoyage : `/plugin marketplace remove e2e-local` puis `trash /tmp/agence-image-e2e`.
+```bash
+OPENAI_API_KEY=probe /Users/recarnot/dev/erom-agence-image/scripts/mcp-handshake.sh "$DEST/servers/gpt-image/dist/index.js"
+GEMINI_API_KEY=probe /Users/recarnot/dev/erom-agence-image/scripts/mcp-handshake.sh "$DEST/servers/nanobanana/dist/index.js"
+```
 
-- [ ] **Step 7: Committer**
+Expected: 2 outils puis 4 outils, comme dans le dépôt.
+
+- [ ] **Step 7: Charger le plugin dans un vrai Claude Code, en headless**
+
+C'est le test qui exerce le manifeste, la découverte des skills et la résolution de `${CLAUDE_PLUGIN_ROOT}` par le vrai chargeur de plugins.
+
+```bash
+cd /tmp && claude --plugin-dir /Users/recarnot/dev/erom-agence-image/plugin \
+  --debug-file /tmp/agence-image-load.log -p "Réponds uniquement: OK" | tail -3
+```
+
+`--debug-file` plutôt que `--debug` : ce dernier n'écrit rien d'exploitable sur stdout ici.
+
+Expected: la réponse est `OK`. Puis, dans le journal, **chercher le signal positif** plutôt que l'absence du mot « error » :
+
+```bash
+grep -c 'Successfully connected' /tmp/agence-image-load.log
+grep -oE 'plugin:agence-image:[a-z-]+' /tmp/agence-image-load.log | sort -u
+grep -iE 'ENOENT|cannot find module|failed to (start|connect|load)|plugin .* not found' /tmp/agence-image-load.log || echo "aucun échec de chargement"
+```
+
+Expected: au moins 2 connexions réussies, les deux serveurs `plugin:agence-image:nanobanana` et `plugin:agence-image:gpt-image` listés, et aucun échec de chargement.
+
+Ne pas chercher le mot `error` seul : `claude --debug` étiquette `[ERROR]` **tout** ce qu'un serveur MCP écrit sur stderr, y compris ses bannières de démarrage réussi (`🎨 GPT Image MCP Server running via stdio`). Un grep sur `error` produit donc des faux positifs garantis.
+
+Si le chargement échoue pour une raison d'environnement (quota, réseau), ne pas maquiller : reporter l'échec tel quel et laisser l'étape non validée.
+
+Nettoyage : `trash /tmp/agence-image-subdir /tmp/agence-image-load.log`.
+
+- [ ] **Step 8: Committer**
+
+Committer **avant** de rejouer l'étape 6 si elle a été lancée sur un état non committé : `git archive HEAD:plugin` ne voit que ce qui est dans l'historique.
 
 ```bash
 git add plugin/.claude-plugin/plugin.json plugin/.mcp.json plugin/README.md README.md
@@ -1445,7 +1472,8 @@ Sections obligatoires, dans cet ordre :
 
 2. **Routage gpt-image vs nanobanana** — tableau à deux colonnes :
    - gpt-image : texte exact à rendre dans l'image, maquettes d'interface, affiches et typographie, composition de plusieurs images sources, retouche devant préserver identité et géométrie, photo produit.
-   - nanobanana : icônes multi-tailles, diagrammes techniques, itération rapide et bon marché, ratios exotiques (21:9, 8:1), sorties 4K.
+   - nanobanana : icônes multi-tailles, diagrammes techniques, itération rapide et bon marché, ratios au-delà de 3:1 (8:1, 4:1, 1:4, 1:8), fond transparent (sans garantie).
+   - Attention, erreur à ne pas reproduire : **21:9 n'est pas un critère de routage**. Il vaut 2,33:1, sous le plafond de 3:1 de gpt-image-2, et `2688x1152` passe `validateSize` (vérifié par exécution). Router une bannière 21:9 portant du texte exact vers nanobanana serait un contresens, cette skill existant précisément pour éviter ça. De même, `3840x2160` est valide : le 4K n'est pas une limite dure mais un dépassement du plafond de fiabilité conseillé (2560x1440).
 
 3. **Défauts intelligents** — `gpt-image-2`, `size: auto`, `quality: auto` ; `quality: low` pour brouillons et volume ; `quality: medium` ou `high` dès qu'il y a du texte dense ou de petits caractères ; répertoire de travail courant comme `output_dir` par défaut.
 
