@@ -56027,6 +56027,25 @@ function generateFilename(prompt, prefix = "nanobanana") {
   const timestamp = Date.now();
   return `${prefix}_${slug}_${timestamp}.png`;
 }
+var MIME_TO_EXTENSION = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/gif": "gif"
+};
+function extensionForMimeType(mimeType) {
+  if (!mimeType)
+    return;
+  return MIME_TO_EXTENSION[mimeType];
+}
+function correctExtension(filename, mimeType) {
+  const ext = extensionForMimeType(mimeType);
+  if (!ext)
+    return filename;
+  const currentExt = path2.extname(filename);
+  const base = currentExt ? filename.slice(0, -currentExt.length) : filename;
+  return `${base}.${ext}`;
+}
 function ensureDir(dirPath) {
   const resolved = path2.resolve(dirPath);
   if (!fs3.existsSync(resolved)) {
@@ -56112,7 +56131,8 @@ function extractAndSaveImage(response, outputDir, filename) {
       if (!imageData)
         continue;
       const buffer = Buffer.from(imageData, "base64");
-      filePath = path2.join(outputDir, filename);
+      const correctedFilename = correctExtension(filename, part.inlineData.mimeType);
+      filePath = path2.join(outputDir, correctedFilename);
       fs3.writeFileSync(filePath, buffer);
       imageSaved = true;
     }

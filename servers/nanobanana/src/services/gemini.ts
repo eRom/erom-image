@@ -57,6 +57,43 @@ function generateFilename(prompt: string, prefix: string = "nanobanana"): string
   return `${prefix}_${slug}_${timestamp}.png`;
 }
 
+// Known MIME types the Gemini image API returns, mapped to their file extension.
+const MIME_TO_EXTENSION: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+
+/**
+ * Translates an image MIME type into a file extension. Returns undefined for
+ * an unknown or missing MIME type — callers must not guess in that case.
+ */
+export function extensionForMimeType(mimeType: string | undefined): string | undefined {
+  if (!mimeType) return undefined;
+  return MIME_TO_EXTENSION[mimeType];
+}
+
+/**
+ * Returns `filename` with its extension corrected to match `mimeType`, the
+ * type actually reported by the API. The API sometimes returns a different
+ * image type than the extension baked into the requested filename (e.g. a
+ * `.png` name for a JPEG payload), which produces a file that lies about its
+ * own content.
+ *
+ * If `mimeType` is missing or unrecognized, `filename` is returned unchanged
+ * — never degrade a case that works today. If `filename` has no extension,
+ * one is appended.
+ */
+export function correctExtension(filename: string, mimeType: string | undefined): string {
+  const ext = extensionForMimeType(mimeType);
+  if (!ext) return filename;
+
+  const currentExt = path.extname(filename);
+  const base = currentExt ? filename.slice(0, -currentExt.length) : filename;
+  return `${base}.${ext}`;
+}
+
 function ensureDir(dirPath: string): string {
   const resolved = path.resolve(dirPath);
   if (!fs.existsSync(resolved)) {
@@ -155,7 +192,7 @@ export async function editImage(
 
 // ─── Response Processing ────────────────────────────────────────────────────
 
-function extractAndSaveImage(
+export function extractAndSaveImage(
   response: any,
   outputDir: string,
   filename: string
@@ -179,7 +216,8 @@ function extractAndSaveImage(
       if (!imageData) continue;
 
       const buffer = Buffer.from(imageData, "base64");
-      filePath = path.join(outputDir, filename);
+      const correctedFilename = correctExtension(filename, part.inlineData.mimeType);
+      filePath = path.join(outputDir, correctedFilename);
       fs.writeFileSync(filePath, buffer);
       imageSaved = true;
     }

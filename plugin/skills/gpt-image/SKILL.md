@@ -105,7 +105,7 @@ Génère une image à partir d'un prompt texte.
 | `mask_path` | string | non | aucun | PNG avec canal alpha, aux dimensions de la première image et de même format ; une source `jpeg` ou `webp` n'ayant pas de canal alpha, la convertir en PNG avant tout masquage. Par convention la zone transparente est celle qui sera repeinte, mais la doc OpenAI ne l'énonce pas explicitement : vérifier sur un premier essai et inverser le masque si le résultat est inversé |
 | `output_dir` | string | non | dossier de la 1re image | Répertoire de sortie |
 | `filename` | string | non | auto | Sinon `gptimage_edit_<slug>_<timestamp>.<ext>` |
-| `size` | string | non | `"auto"` | Mêmes règles que `gpt_image_generate` |
+| `size` | string | non | `"auto"` | Mêmes règles que `gpt_image_generate`. En `auto`, l'édition ne préserve pas les dimensions de la source : constaté en test réel, une source 1024x1024 éditée en `auto` est ressortie en 1254x1254. Passer une taille explicite si les dimensions de la source doivent être préservées. |
 | `quality` | enum | non | `"auto"` | `auto` · `low` · `medium` · `high` |
 | `output_format` | enum | non | `"png"` | `png` · `jpeg` · `webp` |
 | `output_compression` | integer | non | aucun | 0 à 100 ; `jpeg` et `webp` seulement |
@@ -289,3 +289,4 @@ Le coût croît avec la surface : `2048x2048` est quatre fois plus de pixels que
 | Ratio plafonné à 3:1 | Ni `8:1`, ni `4:1`, ni `1:8` : ces formats vont chez nanobanana. `21:9` (2,3333:1) reste en revanche accessible ici. |
 | Sorties raster uniquement | `png`, `jpeg`, `webp`. Pas de SVG, pas de vidéo. |
 | Une image par appel | Pas de variantes multiples, pas de streaming, pas de réglage de fidélité d'entrée dans cette surface. |
+| `size: "auto"` ne préserve pas les dimensions en édition | Source 1024x1024 éditée en `auto` ressortie en 1254x1254 (constaté en test réel, et 1254 n'est même pas multiple de 16). Passer une taille explicite pour préserver les dimensions de la source. |
