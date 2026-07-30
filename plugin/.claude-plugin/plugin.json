@@ -1,0 +1,23 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "agence-image",
+  "description": "Génération et édition d'images : nanobanana (Gemini) pour images, icônes et diagrammes ; gpt-image (OpenAI gpt-image-2) pour texte exact, compositions multi-images et éditions haute fidélité.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Romain Ecarnot",
+    "url": "https://github.com/eRom"
+  },
+  "repository": "https://github.com/eRom/erom-agence-image",
+  "license": "MIT",
+  "keywords": [
+    "images",
+    "image-generation",
+    "mcp",
+    "gemini",
+    "nanobanana",
+    "openai",
+    "gpt-image"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
+}

@@ -1,15 +1,17 @@
 {
   "mcpServers": {
     "nanobanana": {
+      "type": "stdio",
       "command": "node",
-      "args": ["./servers/nanobanana/dist/index.js"],
+      "args": ["${CLAUDE_PLUGIN_ROOT}/servers/nanobanana/dist/index.js"],
       "env": {
         "GEMINI_API_KEY": "${GEMINI_API_KEY}"
       }
     },
     "gpt-image": {
+      "type": "stdio",
       "command": "node",
-      "args": ["./servers/gpt-image/dist/index.js"],
+      "args": ["${CLAUDE_PLUGIN_ROOT}/servers/gpt-image/dist/index.js"],
       "env": {
         "OPENAI_API_KEY": "${OPENAI_API_KEY}"
       }
