@@ -139,11 +139,13 @@ Expected: exit 0, aucune sortie.
 
 - [ ] **Step 5: Écrire `scripts/mcp-handshake.sh`**
 
+Commentaires en anglais, comme tout le code du repo (contrainte globale).
+
 ```bash
 #!/usr/bin/env bash
-# Liste les tools exposés par un serveur MCP stdio, via un handshake JSON-RPC minimal.
-# Usage: scripts/mcp-handshake.sh <chemin/vers/bundle.js>
-# Les variables d'environnement (clés API) sont héritées de l'appelant.
+# List the tools exposed by a stdio MCP server, through a minimal JSON-RPC handshake.
+# Usage: scripts/mcp-handshake.sh <path/to/bundle.js>
+# Environment variables (API keys) are inherited from the caller.
 set -euo pipefail
 
 BUNDLE="${1:?usage: mcp-handshake.sh <bundle.js>}"
