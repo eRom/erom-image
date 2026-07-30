@@ -1,0 +1,24 @@
+{
+  "name": "erom-agence-image",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "build": "bun run build:nanobanana && bun run build:gpt-image",
+    "build:nanobanana": "bun build servers/nanobanana/src/index.ts --target=node --outfile=plugin/servers/nanobanana/dist/index.js",
+    "build:gpt-image": "bun build servers/gpt-image/src/index.ts --target=node --outfile=plugin/servers/gpt-image/dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@google/genai": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.5",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2"
+  }
+}
