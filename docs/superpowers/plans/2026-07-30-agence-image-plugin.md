@@ -1383,7 +1383,7 @@ cat > /tmp/agence-image-e2e/.claude-plugin/marketplace.json <<'EOF'
         "source": "git-subdir",
         "url": "file:///Users/recarnot/dev/erom-agence-image",
         "path": "plugin",
-        "ref": "main"
+        "ref": "feat/plugin-agence-image"
       },
       "description": "E2E local",
       "version": "0.1.0"
@@ -1392,6 +1392,8 @@ cat > /tmp/agence-image-e2e/.claude-plugin/marketplace.json <<'EOF'
 }
 EOF
 ```
+
+Le travail vit sur la branche `feat/plugin-agence-image`, d'où le `ref` ci-dessus : cloner `main` installerait l'état d'avant le chantier. Les commits de la tâche doivent être faits avant ce test.
 
 Puis, dans Claude Code : `/plugin marketplace add /tmp/agence-image-e2e` et `/plugin install agence-image@e2e-local`.
 
