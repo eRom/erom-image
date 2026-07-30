@@ -1472,7 +1472,8 @@ Sections obligatoires, dans cet ordre :
 
 2. **Routage gpt-image vs nanobanana** — tableau à deux colonnes :
    - gpt-image : texte exact à rendre dans l'image, maquettes d'interface, affiches et typographie, composition de plusieurs images sources, retouche devant préserver identité et géométrie, photo produit.
-   - nanobanana : icônes multi-tailles, diagrammes techniques, itération rapide et bon marché, ratios exotiques (21:9, 8:1), sorties 4K.
+   - nanobanana : icônes multi-tailles, diagrammes techniques, itération rapide et bon marché, ratios au-delà de 3:1 (8:1, 4:1, 1:4, 1:8), fond transparent (sans garantie).
+   - Attention, erreur à ne pas reproduire : **21:9 n'est pas un critère de routage**. Il vaut 2,33:1, sous le plafond de 3:1 de gpt-image-2, et `2688x1152` passe `validateSize` (vérifié par exécution). Router une bannière 21:9 portant du texte exact vers nanobanana serait un contresens, cette skill existant précisément pour éviter ça. De même, `3840x2160` est valide : le 4K n'est pas une limite dure mais un dépassement du plafond de fiabilité conseillé (2560x1440).
 
 3. **Défauts intelligents** — `gpt-image-2`, `size: auto`, `quality: auto` ; `quality: low` pour brouillons et volume ; `quality: medium` ou `high` dès qu'il y a du texte dense ou de petits caractères ; répertoire de travail courant comme `output_dir` par défaut.
 
