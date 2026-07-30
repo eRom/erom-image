@@ -1368,44 +1368,61 @@ ni étape de build.
 MIT
 ```
 
-- [ ] **Step 6: Test d'installation local**
+- [ ] **Step 6: Vérifier ce que `git-subdir` livrerait réellement**
 
-Créer une marketplace temporaire pointant sur le repo local :
+L'installation par la marketplace clone le dépôt et n'en extrait que le sous-dossier `plugin/`. Ce test reproduit cette extraction sans passer par le client, à partir du dernier commit de la branche : il faut donc avoir committé l'étape 7 avant, ou relancer ce test après.
 
 ```bash
-mkdir -p /tmp/agence-image-e2e/.claude-plugin
-cat > /tmp/agence-image-e2e/.claude-plugin/marketplace.json <<'EOF'
-{
-  "name": "e2e-local",
-  "owner": { "name": "e2e", "email": "e2e@local" },
-  "plugins": [
-    {
-      "name": "agence-image",
-      "source": {
-        "source": "git-subdir",
-        "url": "file:///Users/recarnot/dev/erom-agence-image",
-        "path": "plugin",
-        "ref": "feat/plugin-agence-image"
-      },
-      "description": "E2E local",
-      "version": "0.1.0"
-    }
-  ]
-}
-EOF
+DEST=/tmp/agence-image-subdir && mkdir -p "$DEST"
+git archive --format=tar HEAD:plugin | tar -x -C "$DEST"
+find "$DEST" -type f | sed "s|$DEST/||" | sort
 ```
 
-Le travail vit sur la branche `feat/plugin-agence-image`, d'où le `ref` ci-dessus : cloner `main` installerait l'état d'avant le chantier. Les commits de la tâche doivent être faits avant ce test.
+Expected: exactement cette liste, ni plus ni moins.
 
-Puis, dans Claude Code : `/plugin marketplace add /tmp/agence-image-e2e` et `/plugin install agence-image@e2e-local`.
+```
+.claude-plugin/plugin.json
+.mcp.json
+README.md
+servers/gpt-image/dist/index.js
+servers/nanobanana/dist/index.js
+skills/gpt-image/SKILL.md
+skills/nanobanana/SKILL.md
+```
 
-Expected: le cache `~/.claude/plugins/cache/e2e-local/agence-image/0.1.0/` contient `.claude-plugin/`, `.mcp.json`, `skills/`, `servers/` et **rien d'autre** (ni `docs/`, ni `servers/*/src`), et `/mcp` liste `nanobanana` et `gpt-image`.
+Aucun `docs/`, aucun `servers/*/src`, aucun `node_modules`, aucun `package.json`. Vérifier ensuite que les bundles extraits fonctionnent hors du dépôt :
 
-Si `file://` n'est pas accepté comme source `git-subdir`, noter le repli : l'E2E réel se fera après le push de la tâche 7, et cette étape est marquée comme non exécutée plutôt que validée.
+```bash
+OPENAI_API_KEY=probe /Users/recarnot/dev/erom-agence-image/scripts/mcp-handshake.sh "$DEST/servers/gpt-image/dist/index.js"
+GEMINI_API_KEY=probe /Users/recarnot/dev/erom-agence-image/scripts/mcp-handshake.sh "$DEST/servers/nanobanana/dist/index.js"
+```
 
-Nettoyage : `/plugin marketplace remove e2e-local` puis `trash /tmp/agence-image-e2e`.
+Expected: 2 outils puis 4 outils, comme dans le dépôt.
 
-- [ ] **Step 7: Committer**
+- [ ] **Step 7: Charger le plugin dans un vrai Claude Code, en headless**
+
+C'est le test qui exerce le manifeste, la découverte des skills et la résolution de `${CLAUDE_PLUGIN_ROOT}` par le vrai chargeur de plugins.
+
+```bash
+cd /tmp && claude --plugin-dir /Users/recarnot/dev/erom-agence-image/plugin --debug -p "Réponds uniquement: OK" 2>&1 | tee /tmp/agence-image-load.log | tail -5
+```
+
+Expected: la sortie se termine par `OK`, sans erreur de chargement de plugin. Puis, dans le journal :
+
+```bash
+grep -ciE 'nanobanana|gpt-image' /tmp/agence-image-load.log
+grep -iE 'error|failed|cannot find|ENOENT' /tmp/agence-image-load.log | grep -iE 'plugin|mcp|nanobanana|gpt-image' || echo "aucune erreur de plugin"
+```
+
+Expected: le premier compte est non nul (les deux serveurs sont vus par le chargeur), le second n'affiche aucune erreur liée au plugin.
+
+Si le chargement échoue pour une raison d'environnement (quota, réseau), ne pas maquiller : reporter l'échec tel quel et laisser l'étape non validée.
+
+Nettoyage : `trash /tmp/agence-image-subdir /tmp/agence-image-load.log`.
+
+- [ ] **Step 8: Committer**
+
+Committer **avant** de rejouer l'étape 6 si elle a été lancée sur un état non committé : `git archive HEAD:plugin` ne voit que ce qui est dans l'historique.
 
 ```bash
 git add plugin/.claude-plugin/plugin.json plugin/.mcp.json plugin/README.md README.md
