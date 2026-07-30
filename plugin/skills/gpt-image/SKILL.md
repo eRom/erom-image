@@ -18,6 +18,7 @@ Ce que ce serveur fait mieux que nanobanana : **le texte rendu dans l'image est 
 - **Ne JAMAIS appeler les tools `mcp__plugin_agence-image_gpt-image__*` directement** dans le contexte principal
 - Toujours déléguer via le **Task tool** avec `subagent_type: "general-purpose"` pour protéger la fenêtre de contexte
 - Le sous-agent doit : charger le tool via `ToolSearch`, appeler le tool MCP, et retourner uniquement le résultat (chemin du fichier généré, succès/erreur)
+- La réponse de l'outil est un bloc texte dont la ligne utile est `📁 Saved to: <chemin>` : le sous-agent en extrait le chemin et ne remonte que lui, jamais le bloc entier
 - Le prompt du sous-agent doit contenir tous les paramètres nécessaires, prompt image complet inclus (`prompt`, `output_dir`, `size`, `quality`, `image_paths`...)
 
 **Avant de déléguer :**
@@ -38,10 +39,13 @@ Ce que ce serveur fait mieux que nanobanana : **le texte rendu dans l'image est 
 | Maquette d'interface : écran d'app, dashboard, composant avec libellés | Icône à sortir en plusieurs tailles d'un coup (`nanobanana_icon`) |
 | Affiche, poster, couverture, mise en page typographique | Diagramme technique structuré (`nanobanana_diagram`) |
 | Composition de plusieurs images sources en une seule (jusqu'à 16 entrées) | Itération rapide et bon marché, exploration en volume |
-| Retouche devant préserver identité, géométrie, cadrage, lumière | Ratio exotique : `21:9`, `8:1`, `4:1`, `1:4` (gpt-image plafonne à 3:1) |
-| Photo produit, packshot, rendu commercial crédible | Sortie 4K, ou fond transparent souhaité |
+| Retouche devant préserver identité, géométrie, cadrage, lumière | Ratio au-delà de 3:1 : `8:1`, `4:1`, `1:4`, `1:8` (gpt-image plafonne à 3:1) |
+| Photo produit, packshot, rendu commercial crédible | Fond transparent souhaité, sachant que nanobanana ne le garantit pas non plus |
+| Inpainting : remplacer une zone précise via un masque | Sortie au-delà de `2560x1440` : gpt-image accepte jusqu'à `3840x2160`, mais c'est au-dessus de son plafond de fiabilité conseillé |
 
-**Cas mixte fréquent :** visuel riche sans contrainte typographique → nanobanana pour la base, puis `gpt_image_edit` pour incruster le texte exact.
+**`21:9` n'est pas un motif de routage :** il vaut 2,3333:1, donc sous le plafond de 3:1. Une bannière 21:9 portant un slogan exact reste un cas gpt-image (`2688x1152`).
+
+**Cas mixte fréquent :** visuel riche dont le rendu graphique prime, avec du texte exact ajouté ensuite → nanobanana pour la base, puis `gpt_image_edit` pour incruster le texte.
 
 ---
 
@@ -73,7 +77,7 @@ Génère une image à partir d'un prompt texte.
 | Paramètre | Type | Requis | Défaut | Description |
 |-----------|------|--------|--------|-------------|
 | `prompt` | string | oui | aucun | Description de l'image (1 à 5000 caractères) |
-| `output_dir` | string | non | `"./"` | Répertoire de sortie, créé s'il n'existe pas. Passer un chemin absolu. |
+| `output_dir` | string | non | `"./"` | Répertoire de sortie, créé s'il n'existe pas. Le défaut `"./"` est résolu dans le répertoire courant du **processus serveur MCP**, pas dans celui de la conversation : laissé tel quel, le fichier atterrit hors du projet. Toujours passer un chemin absolu. |
 | `filename` | string | non | auto | Nom du fichier ; sinon `gptimage_<slug>_<timestamp>.<ext>` |
 | `size` | string | non | `"auto"` | Preset ou `"LARGEURxHAUTEUR"` custom (voir section Tailles) |
 | `quality` | enum | non | `"auto"` | `auto` · `low` · `medium` · `high` |
@@ -98,7 +102,7 @@ Génère une image à partir d'un prompt texte.
 |-----------|------|--------|--------|-------------|
 | `image_paths` | array[string] | oui | aucun | 1 à 16 chemins. L'ordre du tableau fixe les index `Image 1`, `Image 2`... du prompt. |
 | `prompt` | string | oui | aucun | Instructions d'édition (1 à 5000 caractères) |
-| `mask_path` | string | non | aucun | PNG avec canal alpha, aux dimensions de la première image et de même format ; par convention la zone transparente est celle qui sera repeinte, mais la doc OpenAI ne l'énonce pas explicitement : vérifier sur un premier essai et inverser le masque si le résultat est inversé |
+| `mask_path` | string | non | aucun | PNG avec canal alpha, aux dimensions de la première image et de même format ; une source `jpeg` ou `webp` n'ayant pas de canal alpha, la convertir en PNG avant tout masquage. Par convention la zone transparente est celle qui sera repeinte, mais la doc OpenAI ne l'énonce pas explicitement : vérifier sur un premier essai et inverser le masque si le résultat est inversé |
 | `output_dir` | string | non | dossier de la 1re image | Répertoire de sortie |
 | `filename` | string | non | auto | Sinon `gptimage_edit_<slug>_<timestamp>.<ext>` |
 | `size` | string | non | `"auto"` | Mêmes règles que `gpt_image_generate` |
@@ -139,20 +143,23 @@ Génère une image à partir d'un prompt texte.
 | Ratio long/court maximum | 3:1 |
 | Pixels totaux | entre 655 360 et 8 294 400 |
 
-**Plafond de fiabilité conseillé : `2560x1440`.** Les limites dures vont plus loin, la qualité de rendu se dégrade avant.
+**Plafond de fiabilité conseillé : `2560x1440`.** Les limites dures vont plus loin (`3840x2160` passe la validation, il touche exactement le plafond de 8 294 400 pixels). C'est une convention de prudence retenue pour ce serveur, pas une mesure : au-delà, considérer le rendu comme non éprouvé plutôt que dégradé.
 
-**Correspondances d'usage :**
+**Correspondances d'usage.** Toutes ces valeurs ont été exécutées contre la validation du serveur ; les utiliser telles quelles évite tout calcul.
 
 | Besoin | Taille | Note |
 |--------|--------|------|
 | Brouillon, exploration | `1024x1024` | avec `quality: "low"` |
-| Paysage 16:9 propre | `2560x1440` | plafond de fiabilité, 16:9 exact |
-| Paysage plus léger | `1920x1088` | 1080 n'est pas multiple de 16, 1088 l'est |
-| Bannière très large | `2560x1088` | ratio 2,35:1, sous le plafond de 3:1 |
-| Portrait 9:16 (story) | `1024x1792` | |
-| Affiche, couverture | `1024x1536` | preset |
+| Paysage 16:9, qualité maximale conseillée | `2560x1440` | 16:9 exact (1,7778:1), plafond de fiabilité |
+| Paysage 16:9 léger | `1280x720` | 16:9 exact, 921 600 px, juste au-dessus du plancher de 655 360 |
+| Paysage proche 16:9, taille moyenne | `1920x1088` | 1,7647:1 (1080 n'est pas multiple de 16, 1088 l'est) |
+| Bannière 21:9 | `2688x1152` | 21:9 exact (2,3333:1), largement dans les clous |
+| Bannière plus large encore | `2560x1088` | 2,3529:1, plus large que 21:9, toujours sous le plafond de 3:1 |
+| Portrait 9:16 (story) | `1152x2048` | 9:16 exact (1,7778:1) |
+| Portrait proche 9:16, plus léger | `1024x1792` | 1,75:1 |
+| Affiche, couverture | `1024x1536` | preset, 2:3 |
 | Impression carrée | `2048x2048` | preset |
-| Ratio au-delà de 3:1 | impossible ici | passer par nanobanana (`8:1`, `4:1`, `21:9`) |
+| Ratio au-delà de 3:1 | impossible ici | passer par nanobanana (`8:1`, `4:1`, `1:8`) |
 
 ---
 
@@ -229,11 +236,11 @@ Si le texte revient faux : ne pas relancer le même prompt à l'identique. Monte
 ## Exemples d'utilisation
 
 **"Affiche pour un concert le 21 mars, texte exact CONCERT 21 MARS"**
-→ `gpt_image_generate` avec `size: "1024x1536"`, `quality: "high"`, prompt :
+→ `gpt_image_generate` avec `size: "1024x1536"`, `quality: "high"`, `output_dir: "/Users/recarnot/dev/mon-projet/assets"`, prompt :
 *Affiche de concert. Fond dégradé violet nuit vers noir, grain fin. Silhouette de guitariste à contre-jour en bas de cadre. En haut, le texte "CONCERT 21 MARS" en typographie grotesque condensée, capitales blanches, très grande taille, centré. Aucun autre texte. Marges larges.*
 
 **"Maquette de l'écran d'accueil d'une app de suivi de courses"**
-→ `gpt_image_generate` avec `size: "1024x1536"`, `quality: "high"`, prompt :
+→ `gpt_image_generate` avec `size: "1024x1536"`, `quality: "high"`, `output_dir: "/Users/recarnot/dev/mon-projet/design"`, prompt :
 *Maquette d'interface mobile, fond sombre #111. En-tête avec le titre "Mes courses". Trois cartes empilées portant les libellés "Épicerie", "Pharmacie", "Marché", chacune avec un compteur d'articles. Barre de navigation basse à trois icônes. Style plat, coins arrondis, accent ambre. Texte net et lisible.*
 
 **"Mets ce produit sur ce fond texturé"**
@@ -249,7 +256,7 @@ Si le texte revient faux : ne pas relancer le même prompt à l'identique. Monte
 *Fill the masked area with a seamless continuation of the wall behind. Change only the masked region, keep everything else the same.*
 
 **"Explore cinq directions de visuel pour la home"**
-→ 5 appels `gpt_image_generate` en `quality: "low"`, `size: "1024x1024"` (~$0,03 au total), puis un seul appel `high` sur la direction retenue
+→ 5 appels `gpt_image_generate` en `quality: "low"`, `size: "1024x1024"`, même `output_dir` absolu pour tous (~$0,03 au total), puis un seul appel `high` sur la direction retenue
 
 ---
 
@@ -272,13 +279,13 @@ Le coût croît avec la surface : `2048x2048` est quatre fois plus de pixels que
 
 | Limitation | Détail et contournement |
 |------------|-------------------------|
-| Pas de fond transparent | gpt-image-2 n'a pas de mode transparent et rejette une requête qui en demande un. La valeur n'est d'ailleurs pas exposée par l'outil (`background` accepte `auto` et `opaque`). Pour un détourage : sortir en `opaque` et détourer en aval, ou passer par nanobanana. |
+| Pas de fond transparent | gpt-image-2 n'a pas de mode transparent et rejette une requête qui en demande un. La valeur n'est d'ailleurs pas exposée par l'outil (`background` accepte `auto` et `opaque`). Pour un détourage : sortir en `opaque` et détourer en aval, ou passer par nanobanana, dont la transparence n'est pas garantie non plus. |
 | Latence en `quality: "high"` | Un appel en haute qualité et grande taille peut dépasser 60 s. Si timeout, augmenter `MCP_TOOL_TIMEOUT` à `120000`. |
 | Vérification d'organisation OpenAI | Le premier usage peut échouer tant que l'organisation n'est pas vérifiée dans la console OpenAI. L'erreur API le dit explicitement ; aucun retry ne la résout. |
 | Plafond de facturation | `OpenAI API 400 (billing_hard_limit_reached)` signifie que le plafond de dépense OpenAI est atteint. Ne pas réessayer : il faut relever le plafond côté compte. |
 | Modération | Une requête peut être bloquée ; l'erreur nomme l'étape et les catégories. `moderation: "low"` assouplit le filtre, sur `gpt_image_generate` uniquement. |
 | Masquage entièrement guidé par le prompt | Le modèle se sert du masque comme d'une indication et peut ne pas en suivre la forme avec précision. Le prompt reste le pilote : décrire ce qui doit apparaître dans la zone, pas seulement la masquer. |
-| Contraintes de fichier du masque | L'image à éditer et son masque doivent être de même format et de même taille, chacun sous 50 Mo. |
-| Ratio plafonné à 3:1 | Ni `21:9`, ni `8:1`, ni `4:1`. Ces formats vont chez nanobanana. |
+| Contraintes de fichier du masque | L'image à éditer et son masque doivent être de même format et de même taille, chacun sous 50 Mo. Le masque étant un PNG à canal alpha, une source `jpeg` ou `webp` doit être convertie en PNG avant tout masquage. |
+| Ratio plafonné à 3:1 | Ni `8:1`, ni `4:1`, ni `1:8` : ces formats vont chez nanobanana. `21:9` (2,3333:1) reste en revanche accessible ici. |
 | Sorties raster uniquement | `png`, `jpeg`, `webp`. Pas de SVG, pas de vidéo. |
 | Une image par appel | Pas de variantes multiples, pas de streaming, pas de réglage de fidélité d'entrée dans cette surface. |
