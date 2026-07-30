@@ -98,7 +98,7 @@ Génère une image à partir d'un prompt texte.
 |-----------|------|--------|--------|-------------|
 | `image_paths` | array[string] | oui | aucun | 1 à 16 chemins. L'ordre du tableau fixe les index `Image 1`, `Image 2`... du prompt. |
 | `prompt` | string | oui | aucun | Instructions d'édition (1 à 5000 caractères) |
-| `mask_path` | string | non | aucun | PNG avec canal alpha, aux dimensions de la première image ; la zone transparente est celle qui sera repeinte |
+| `mask_path` | string | non | aucun | PNG avec canal alpha, aux dimensions de la première image et de même format ; par convention la zone transparente est celle qui sera repeinte, mais la doc OpenAI ne l'énonce pas explicitement : vérifier sur un premier essai et inverser le masque si le résultat est inversé |
 | `output_dir` | string | non | dossier de la 1re image | Répertoire de sortie |
 | `filename` | string | non | auto | Sinon `gptimage_edit_<slug>_<timestamp>.<ext>` |
 | `size` | string | non | `"auto"` | Mêmes règles que `gpt_image_generate` |
@@ -277,6 +277,8 @@ Le coût croît avec la surface : `2048x2048` est quatre fois plus de pixels que
 | Vérification d'organisation OpenAI | Le premier usage peut échouer tant que l'organisation n'est pas vérifiée dans la console OpenAI. L'erreur API le dit explicitement ; aucun retry ne la résout. |
 | Plafond de facturation | `OpenAI API 400 (billing_hard_limit_reached)` signifie que le plafond de dépense OpenAI est atteint. Ne pas réessayer : il faut relever le plafond côté compte. |
 | Modération | Une requête peut être bloquée ; l'erreur nomme l'étape et les catégories. `moderation: "low"` assouplit le filtre, sur `gpt_image_generate` uniquement. |
+| Masquage entièrement guidé par le prompt | Le modèle se sert du masque comme d'une indication et peut ne pas en suivre la forme avec précision. Le prompt reste le pilote : décrire ce qui doit apparaître dans la zone, pas seulement la masquer. |
+| Contraintes de fichier du masque | L'image à éditer et son masque doivent être de même format et de même taille, chacun sous 50 Mo. |
 | Ratio plafonné à 3:1 | Ni `21:9`, ni `8:1`, ni `4:1`. Ces formats vont chez nanobanana. |
 | Sorties raster uniquement | `png`, `jpeg`, `webp`. Pas de SVG, pas de vidéo. |
 | Une image par appel | Pas de variantes multiples, pas de streaming, pas de réglage de fidélité d'entrée dans cette surface. |
