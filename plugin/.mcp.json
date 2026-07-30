@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "nanobanana": {
+      "command": "node",
+      "args": ["./servers/nanobanana/dist/index.js"],
+      "env": {
+        "GEMINI_API_KEY": "${GEMINI_API_KEY}"
+      }
+    },
+    "gpt-image": {
+      "command": "node",
+      "args": ["./servers/gpt-image/dist/index.js"],
+      "env": {
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
+      }
+    }
+  }
+}

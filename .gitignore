@@ -1,0 +1,6 @@
+node_modules/
+.DS_Store
+*.log
+
+# Réceptacle caserne local (IDs Linear/Slack internes) - repo destiné à être public
+_memory_/
