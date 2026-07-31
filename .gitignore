@@ -2,5 +2,11 @@ node_modules/
 .DS_Store
 *.log
 
+# Sous-projet Python filigrane/ (uv.lock est committé volontairement)
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
 # Réceptacle caserne local (IDs Linear/Slack internes) - repo destiné à être public
 _memory_/

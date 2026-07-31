@@ -5,11 +5,13 @@
   "type": "module",
   "engines": { "node": ">=18" },
   "scripts": {
-    "build": "bun run build:nanobanana && bun run build:gpt-image",
+    "build": "bun run build:nanobanana && bun run build:gpt-image && bun run build:filigrane",
     "build:nanobanana": "bun build servers/nanobanana/src/index.ts --target=node --outfile=plugin/servers/nanobanana/dist/index.js",
     "build:gpt-image": "bun build servers/gpt-image/src/index.ts --target=node --outfile=plugin/servers/gpt-image/dist/index.js",
+    "build:filigrane": "./scripts/vendor-filigrane.sh",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test && bun run test:filigrane",
+    "test:filigrane": "uv run --project filigrane pytest -q"
   },
   "dependencies": {
     "@google/genai": "^1.0.0",
