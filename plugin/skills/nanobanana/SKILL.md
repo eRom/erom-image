@@ -225,3 +225,5 @@ Génère des diagrammes techniques professionnels à partir de descriptions text
 - **Texte dans les images** — peu fiable, le texte rendu peut contenir des erreurs typographiques
 - **Tailles d'icônes multiples** — peut nécessiter un timeout plus long (120s)
 - **Transparence** — non garantie selon le modèle et le prompt
+- **Échecs intermittents `IMAGE_OTHER`** — l'API peut renvoyer une réponse vide sans motif de blocage, surtout sur `nano-banana-pro`, puis réussir le même appel quelques minutes plus tard. Le serveur retente automatiquement le modèle demandé, puis bascule sur `nano-banana-2` en le signalant par une ligne `⚠️ Fallback` dans le résultat. Si un échec remonte malgré tout, le message porte le `finishReason` réel : ne jamais conclure à une censure sans y lire un motif de blocage explicite (`IMAGE_SAFETY`, `PROHIBITED_CONTENT`, `IMAGE_RECITATION`).
+- **Édition = régénération** — `nanobanana_edit` reconstruit l'image entière, il ne retouche pas localement. Les textures, tracés à main levée et détails non mentionnés dans le prompt seront redessinés.

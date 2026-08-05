@@ -153,9 +153,14 @@ Example usage:
           `📏 Complexity: ${params.complexity}`,
           `🖼️ Aspect ratio: ${params.aspect_ratio}`,
           `📐 Resolution: ${params.resolution}`,
-          `🍌 Model: ${params.model}`,
+          `🍌 Model: ${result.fallbackFrom ? DEFAULT_MODEL : params.model}`,
         ];
 
+        if (result.fallbackFrom) {
+          lines.push(
+            `⚠️ Fallback: ${result.fallbackFrom} returned no image, ${DEFAULT_MODEL} produced this one`
+          );
+        }
         if (result.textResponse) {
           lines.push(`\n💬 Model notes: ${result.textResponse}`);
         }

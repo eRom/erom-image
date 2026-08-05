@@ -95,9 +95,14 @@ Example prompts:
           `📁 Saved to: ${result.filePath}`,
           `🖼️ Aspect ratio: ${params.aspect_ratio}`,
           `📐 Resolution: ${params.resolution}`,
-          `🍌 Model: ${params.model}`,
+          `🍌 Model: ${result.fallbackFrom ? DEFAULT_MODEL : params.model}`,
         ];
 
+        if (result.fallbackFrom) {
+          lines.push(
+            `⚠️ Fallback: ${result.fallbackFrom} returned no image, ${DEFAULT_MODEL} produced this one`
+          );
+        }
         if (params.style) {
           lines.push(`🎨 Style: ${params.style}`);
         }

@@ -107,6 +107,7 @@ Example usage:
       try {
         const iconPrompt = buildIconPrompt(params);
         const generatedFiles: string[] = [];
+        let fallbackFrom: string | undefined;
 
         // Generate one high-quality icon (the model generates best at higher res)
         // We generate at the largest requested size
@@ -137,6 +138,7 @@ Example usage:
           });
 
           generatedFiles.push(result.filePath);
+          if (result.fallbackFrom) fallbackFrom = result.fallbackFrom;
         }
 
         const lines = [
@@ -145,7 +147,10 @@ Example usage:
           `🎯 Type: ${params.type}`,
           `🎨 Style: ${params.style}`,
           `📐 Sizes: ${params.sizes.map((s) => `${s}px`).join(", ")}`,
-          `🍌 Model: ${params.model}`,
+          `🍌 Model: ${fallbackFrom ? DEFAULT_MODEL : params.model}`,
+          ...(fallbackFrom
+            ? [`⚠️ Fallback: ${fallbackFrom} returned no image, ${DEFAULT_MODEL} produced at least one of these`]
+            : []),
           ``,
           `Generated files:`,
           ...generatedFiles.map((f) => `  • ${f}`),

@@ -22,6 +22,8 @@ export interface GenerateOptions {
 export interface GenerateResult {
   filePath: string;
   textResponse?: string;
+  /** Set when the requested model returned nothing and DEFAULT_MODEL produced the image instead. */
+  fallbackFrom?: string;
 }
 
 // ─── Client Initialization ──────────────────────────────────────────────────
@@ -94,6 +96,93 @@ export function correctExtension(filename: string, mimeType: string | undefined)
   return `${base}.${ext}`;
 }
 
+// ─── Response Diagnostics ───────────────────────────────────────────────────
+
+/**
+ * finishReason values that mean the model refused the content itself. Retrying
+ * one of these on another model just buys the same refusal one call later.
+ */
+const CONTENT_BLOCK_REASONS = new Set([
+  "SAFETY",
+  "IMAGE_SAFETY",
+  "PROHIBITED_CONTENT",
+  "IMAGE_PROHIBITED_CONTENT",
+  "RECITATION",
+  "IMAGE_RECITATION",
+  "BLOCKLIST",
+  "SPII",
+]);
+
+export function getFinishReason(response: any): string | undefined {
+  return response?.candidates?.[0]?.finishReason;
+}
+
+export function hasImageParts(response: any): boolean {
+  const parts = response?.candidates?.[0]?.content?.parts;
+  return Array.isArray(parts) && parts.length > 0;
+}
+
+export function isContentBlock(response: any): boolean {
+  const reason = getFinishReason(response);
+  return (
+    (!!reason && CONTENT_BLOCK_REASONS.has(reason)) ||
+    !!response?.promptFeedback?.blockReason
+  );
+}
+
+/**
+ * Explains why a response carries no image, using what the API actually said:
+ * `finishReason`, `promptFeedback.blockReason`, `safetyRatings`.
+ *
+ * Never assert a safety block we did not observe. `IMAGE_OTHER` arrives with
+ * no safety rating and no block reason, and clears on a retry — calling it
+ * censorship sends the caller off rewriting a prompt that was never the
+ * problem. That misdiagnosis cost a full debugging session on 2026-08-04.
+ */
+export function describeEmptyResponse(response: any): string {
+  const finishReason = getFinishReason(response);
+  const blockReason = response?.promptFeedback?.blockReason;
+  const safetyRatings = response?.candidates?.[0]?.safetyRatings;
+
+  const details: string[] = [];
+  if (finishReason) details.push(`finishReason: ${finishReason}`);
+  if (blockReason) details.push(`blockReason: ${blockReason}`);
+
+  const message =
+    response?.candidates?.[0]?.finishMessage ||
+    response?.promptFeedback?.blockReasonMessage;
+  if (message) details.push(`message: ${message}`);
+
+  if (Array.isArray(safetyRatings) && safetyRatings.length > 0) {
+    details.push(`safetyRatings: ${JSON.stringify(safetyRatings)}`);
+  }
+
+  const suffix = details.length > 0 ? ` (${details.join(", ")})` : "";
+
+  if (isContentBlock(response)) {
+    return `The model refused this request on content grounds${suffix}. Reword the prompt or change the source image.`;
+  }
+
+  if (finishReason) {
+    return `The API returned no image${suffix}. No content block was reported, so this is a generation failure rather than a refusal — another model or another attempt usually clears it.`;
+  }
+
+  return `The API returned no image and gave no finishReason${suffix}. Nothing in the response explains why.`;
+}
+
+/**
+ * True when a response carries no image for a reason worth retrying.
+ *
+ * `IMAGE_OTHER` is intermittent, not deterministic: measured on 2026-08-05
+ * against one banner, `gemini-3-pro-image-preview` failed 7 times in a row
+ * inside one window, then succeeded 4 times out of 5 twenty minutes later on
+ * the identical call. Content refusals are excluded — those are stable, and
+ * retrying one only buys the same refusal a second time.
+ */
+export function isRecoverableFailure(response: any): boolean {
+  return !hasImageParts(response) && !isContentBlock(response);
+}
+
 function ensureDir(dirPath: string): string {
   const resolved = path.resolve(dirPath);
   if (!fs.existsSync(resolved)) {
@@ -102,13 +191,57 @@ function ensureDir(dirPath: string): string {
   return resolved;
 }
 
+/**
+ * Issues the request and recovers from empty responses.
+ *
+ * Recovery order matters: retry the requested model first, because the failure
+ * is intermittent and the caller asked for that model on purpose. Only after a
+ * second empty response do we drop to DEFAULT_MODEL, and the caller is told we
+ * did. A content refusal is returned untouched — extractAndSaveImage turns it
+ * into the right message.
+ */
+export async function resolveWithRecovery(
+  model: string,
+  call: (model: string) => Promise<any>
+): Promise<{ response: any; fallbackFrom?: string }> {
+  const first = await call(model);
+  if (!isRecoverableFailure(first)) return { response: first };
+
+  const second = await call(model);
+  if (!isRecoverableFailure(second)) return { response: second };
+
+  if (model === DEFAULT_MODEL) {
+    throw new Error(`${model} returned no image twice. ${describeEmptyResponse(second)}`);
+  }
+
+  const fallback = await call(DEFAULT_MODEL);
+  if (!hasImageParts(fallback)) {
+    throw new Error(
+      `${model} returned no image twice (${describeEmptyResponse(second)}) ` +
+        `then ${DEFAULT_MODEL} also returned none: ${describeEmptyResponse(fallback)}`
+    );
+  }
+
+  return { response: fallback, fallbackFrom: model };
+}
+
+function generateWithRecovery(request: {
+  model: string;
+  contents: any;
+  config: Record<string, unknown>;
+}): Promise<{ response: any; fallbackFrom?: string }> {
+  const client = getClient();
+  return resolveWithRecovery(request.model, (model) =>
+    client.models.generateContent({ ...request, model } as any)
+  );
+}
+
 // ─── Image Generation (text-to-image) ───────────────────────────────────────
 
 export async function generateImage(
   prompt: string,
   options: GenerateOptions = {}
 ): Promise<GenerateResult> {
-  const client = getClient();
   const model = options.model || DEFAULT_MODEL;
   const outputDir = ensureDir(options.outputDir || process.cwd());
   const filename = options.filename || generateFilename(prompt);
@@ -124,13 +257,13 @@ export async function generateImage(
     config.imageConfig = imageConfig;
   }
 
-  const response = await client.models.generateContent({
+  const { response, fallbackFrom } = await generateWithRecovery({
     model,
     contents: prompt,
     config,
   });
 
-  return extractAndSaveImage(response, outputDir, filename);
+  return { ...extractAndSaveImage(response, outputDir, filename), fallbackFrom };
 }
 
 // ─── Image Editing (image + text-to-image) ──────────────────────────────────
@@ -140,7 +273,6 @@ export async function editImage(
   prompt: string,
   options: GenerateOptions = {}
 ): Promise<GenerateResult> {
-  const client = getClient();
   const model = options.model || DEFAULT_MODEL;
 
   // Resolve and validate source image
@@ -181,13 +313,13 @@ export async function editImage(
     },
   ];
 
-  const response = await client.models.generateContent({
+  const { response, fallbackFrom } = await generateWithRecovery({
     model,
     contents,
     config,
   });
 
-  return extractAndSaveImage(response, outputDir, filename);
+  return { ...extractAndSaveImage(response, outputDir, filename), fallbackFrom };
 }
 
 // ─── Response Processing ────────────────────────────────────────────────────
@@ -201,12 +333,11 @@ export function extractAndSaveImage(
   let imageSaved = false;
   let filePath = "";
 
-  const parts = response?.candidates?.[0]?.content?.parts;
-  if (!parts || parts.length === 0) {
-    throw new Error(
-      "No content in API response. The model may have blocked the request due to safety filters."
-    );
+  if (!hasImageParts(response)) {
+    throw new Error(describeEmptyResponse(response));
   }
+
+  const parts = response.candidates[0].content.parts;
 
   for (const part of parts) {
     if (part.text) {

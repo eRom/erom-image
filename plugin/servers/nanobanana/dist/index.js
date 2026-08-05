@@ -4,6 +4,7 @@ var __create = Object.create;
 var __getProtoOf = Object.getPrototypeOf;
 var __defProp = Object.defineProperty;
 var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __toESM = (mod, isNodeMode, target) => {
   target = mod != null ? __create(__getProtoOf(mod)) : {};
@@ -15,6 +16,20 @@ var __toESM = (mod, isNodeMode, target) => {
         enumerable: true
       });
   return to;
+};
+var __moduleCache = /* @__PURE__ */ new WeakMap;
+var __toCommonJS = (from) => {
+  var entry = __moduleCache.get(from), desc;
+  if (entry)
+    return entry;
+  entry = __defProp({}, "__esModule", { value: true });
+  if (from && typeof from === "object" || typeof from === "function")
+    __getOwnPropNames(from).map((key) => !__hasOwnProp.call(entry, key) && __defProp(entry, key, {
+      get: () => from[key],
+      enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+    }));
+  __moduleCache.set(from, entry);
+  return entry;
 };
 var __commonJS = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports);
 var __export = (target, all) => {
@@ -7805,9 +7820,156 @@ var require_browser = __commonJS((exports, module) => {
   };
 });
 
+// ../../node_modules/supports-color/index.js
+var exports_supports_color = {};
+__export(exports_supports_color, {
+  default: () => supports_color_default,
+  createSupportsColor: () => createSupportsColor
+});
+import process3 from "node:process";
+import os from "node:os";
+import tty from "node:tty";
+function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process3.argv) {
+  const prefix = flag.startsWith("-") ? "" : flag.length === 1 ? "-" : "--";
+  const position = argv.indexOf(prefix + flag);
+  const terminatorPosition = argv.indexOf("--");
+  return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
+}
+function envForceColor() {
+  if (!("FORCE_COLOR" in env)) {
+    return;
+  }
+  if (env.FORCE_COLOR === "true") {
+    return 1;
+  }
+  if (env.FORCE_COLOR === "false") {
+    return 0;
+  }
+  if (env.FORCE_COLOR.length === 0) {
+    return 1;
+  }
+  const level = Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
+  if (![0, 1, 2, 3].includes(level)) {
+    return;
+  }
+  return level;
+}
+function translateLevel(level) {
+  if (level === 0) {
+    return false;
+  }
+  return {
+    level,
+    hasBasic: true,
+    has256: level >= 2,
+    has16m: level >= 3
+  };
+}
+function _supportsColor(haveStream, { streamIsTTY, sniffFlags = true } = {}) {
+  const noFlagForceColor = envForceColor();
+  if (noFlagForceColor !== undefined) {
+    flagForceColor = noFlagForceColor;
+  }
+  const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
+  if (forceColor === 0) {
+    return 0;
+  }
+  if (sniffFlags) {
+    if (hasFlag("color=16m") || hasFlag("color=full") || hasFlag("color=truecolor")) {
+      return 3;
+    }
+    if (hasFlag("color=256")) {
+      return 2;
+    }
+  }
+  if ("TF_BUILD" in env && "AGENT_NAME" in env) {
+    return 1;
+  }
+  if (haveStream && !streamIsTTY && forceColor === undefined) {
+    return 0;
+  }
+  const min = forceColor || 0;
+  if (env.TERM === "dumb") {
+    return min;
+  }
+  if (process3.platform === "win32") {
+    const osRelease = os.release().split(".");
+    if (Number(osRelease[0]) >= 10 && Number(osRelease[2]) >= 10586) {
+      return Number(osRelease[2]) >= 14931 ? 3 : 2;
+    }
+    return 1;
+  }
+  if ("CI" in env) {
+    if (["GITHUB_ACTIONS", "GITEA_ACTIONS", "CIRCLECI"].some((key) => (key in env))) {
+      return 3;
+    }
+    if (["TRAVIS", "APPVEYOR", "GITLAB_CI", "BUILDKITE", "DRONE"].some((sign) => (sign in env)) || env.CI_NAME === "codeship") {
+      return 1;
+    }
+    return min;
+  }
+  if ("TEAMCITY_VERSION" in env) {
+    return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
+  }
+  if (env.COLORTERM === "truecolor") {
+    return 3;
+  }
+  if (env.TERM === "xterm-kitty") {
+    return 3;
+  }
+  if (env.TERM === "xterm-ghostty") {
+    return 3;
+  }
+  if (env.TERM === "wezterm") {
+    return 3;
+  }
+  if ("TERM_PROGRAM" in env) {
+    const version2 = Number.parseInt((env.TERM_PROGRAM_VERSION || "").split(".")[0], 10);
+    switch (env.TERM_PROGRAM) {
+      case "iTerm.app": {
+        return version2 >= 3 ? 3 : 2;
+      }
+      case "Apple_Terminal": {
+        return 2;
+      }
+    }
+  }
+  if (/-256(color)?$/i.test(env.TERM)) {
+    return 2;
+  }
+  if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
+    return 1;
+  }
+  if ("COLORTERM" in env) {
+    return 1;
+  }
+  return min;
+}
+function createSupportsColor(stream, options = {}) {
+  const level = _supportsColor(stream, {
+    streamIsTTY: stream && stream.isTTY,
+    ...options
+  });
+  return translateLevel(level);
+}
+var env, flagForceColor, supportsColor, supports_color_default;
+var init_supports_color = __esm(() => {
+  ({ env } = process3);
+  if (hasFlag("no-color") || hasFlag("no-colors") || hasFlag("color=false") || hasFlag("color=never")) {
+    flagForceColor = 0;
+  } else if (hasFlag("color") || hasFlag("colors") || hasFlag("color=true") || hasFlag("color=always")) {
+    flagForceColor = 1;
+  }
+  supportsColor = {
+    stdout: createSupportsColor({ isTTY: tty.isatty(1) }),
+    stderr: createSupportsColor({ isTTY: tty.isatty(2) })
+  };
+  supports_color_default = supportsColor;
+});
+
 // node_modules/debug/src/node.js
 var require_node = __commonJS((exports, module) => {
-  var tty = __require("tty");
+  var tty2 = __require("tty");
   var util3 = __require("util");
   exports.init = init;
   exports.log = log;
@@ -7818,8 +7980,8 @@ var require_node = __commonJS((exports, module) => {
   exports.destroy = util3.deprecate(() => {}, "Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.");
   exports.colors = [6, 2, 3, 4, 5, 1];
   try {
-    const supportsColor = (()=>{throw new Error("Cannot require module "+"supports-color");})();
-    if (supportsColor && (supportsColor.stderr || supportsColor).level >= 2) {
+    const supportsColor2 = (init_supports_color(), __toCommonJS(exports_supports_color));
+    if (supportsColor2 && (supportsColor2.stderr || supportsColor2).level >= 2) {
       exports.colors = [
         20,
         21,
@@ -7920,7 +8082,7 @@ var require_node = __commonJS((exports, module) => {
     return obj;
   }, {});
   function useColors() {
-    return "colors" in exports.inspectOpts ? Boolean(exports.inspectOpts.colors) : tty.isatty(process.stderr.fd);
+    return "colors" in exports.inspectOpts ? Boolean(exports.inspectOpts.colors) : tty2.isatty(process.stderr.fd);
   }
   function formatArgs(args) {
     const { namespace: name, useColors: useColors2 } = this;
@@ -12562,14 +12724,14 @@ var require_streams = __commonJS(() => {
   var POOL_SIZE = 65536;
   if (!globalThis.ReadableStream) {
     try {
-      const process3 = __require("node:process");
-      const { emitWarning } = process3;
+      const process4 = __require("node:process");
+      const { emitWarning } = process4;
       try {
-        process3.emitWarning = () => {};
+        process4.emitWarning = () => {};
         Object.assign(globalThis, __require("node:stream/web"));
-        process3.emitWarning = emitWarning;
+        process4.emitWarning = emitWarning;
       } catch (error2) {
-        process3.emitWarning = emitWarning;
+        process4.emitWarning = emitWarning;
         throw error2;
       }
     } catch (error2) {
@@ -16909,7 +17071,7 @@ var require_logging_utils = __commonJS((exports) => {
   exports.setBackend = setBackend;
   exports.log = log;
   var events_1 = __require("events");
-  var process3 = __importStar(__require("process"));
+  var process4 = __importStar(__require("process"));
   var util3 = __importStar(__require("util"));
   var colours_1 = require_colours();
   var LogSeverity;
@@ -16959,7 +17121,7 @@ var require_logging_utils = __commonJS((exports) => {
       this.cached = new Map;
       this.filters = [];
       this.filtersSet = false;
-      let nodeFlag = (_a = process3.env[exports.env.nodeEnables]) !== null && _a !== undefined ? _a : "*";
+      let nodeFlag = (_a = process4.env[exports.env.nodeEnables]) !== null && _a !== undefined ? _a : "*";
       if (nodeFlag === "all") {
         nodeFlag = "*";
       }
@@ -16999,7 +17161,7 @@ var require_logging_utils = __commonJS((exports) => {
       return (fields, ...args) => {
         var _a;
         const nscolour = `${colours_1.Colours.green}${namespace}${colours_1.Colours.reset}`;
-        const pid = `${colours_1.Colours.yellow}${process3.pid}${colours_1.Colours.reset}`;
+        const pid = `${colours_1.Colours.yellow}${process4.pid}${colours_1.Colours.reset}`;
         let level;
         switch (fields.severity) {
           case LogSeverity.ERROR:
@@ -17046,8 +17208,8 @@ var require_logging_utils = __commonJS((exports) => {
     }
     setFilters() {
       var _a;
-      const existingFilters = (_a = process3.env["NODE_DEBUG"]) !== null && _a !== undefined ? _a : "";
-      process3.env["NODE_DEBUG"] = `${existingFilters}${existingFilters ? "," : ""}${this.filters.join(",")}`;
+      const existingFilters = (_a = process4.env["NODE_DEBUG"]) !== null && _a !== undefined ? _a : "";
+      process4.env["NODE_DEBUG"] = `${existingFilters}${existingFilters ? "," : ""}${this.filters.join(",")}`;
     }
   }
   function getDebugBackend(debugPkg) {
@@ -17097,7 +17259,7 @@ var require_logging_utils = __commonJS((exports) => {
   }
   function log(namespace, parent) {
     if (!cachedBackend) {
-      const enablesFlag = process3.env[exports.env.nodeEnables];
+      const enablesFlag = process4.env[exports.env.nodeEnables];
       if (!enablesFlag) {
         return exports.placeholder;
       }
@@ -17918,7 +18080,7 @@ var require_util3 = __commonJS((exports) => {
   exports.isValidFile = isValidFile;
   exports.getWellKnownCertificateConfigFileLocation = getWellKnownCertificateConfigFileLocation;
   var fs2 = __require("fs");
-  var os = __require("os");
+  var os2 = __require("os");
   var path = __require("path");
   var WELL_KNOWN_CERTIFICATE_CONFIG_FILE = "certificate_config.json";
   var CLOUDSDK_CONFIG_DIRECTORY = "gcloud";
@@ -17991,7 +18153,7 @@ var require_util3 = __commonJS((exports) => {
     return path.join(configDir, WELL_KNOWN_CERTIFICATE_CONFIG_FILE);
   }
   function _isWindows() {
-    return os.platform().startsWith("win");
+    return os2.platform().startsWith("win");
   }
 });
 
@@ -18271,8 +18433,8 @@ var require_loginticket = __commonJS((exports) => {
   class LoginTicket {
     envelope;
     payload;
-    constructor(env, pay) {
-      this.envelope = env;
+    constructor(env2, pay) {
+      this.envelope = env2;
       this.payload = pay;
     }
     getEnvelope() {
@@ -19034,25 +19196,25 @@ var require_envDetect = __commonJS((exports) => {
     return envPromise;
   }
   async function getEnvMemoized() {
-    let env = GCPEnv.NONE;
+    let env2 = GCPEnv.NONE;
     if (isAppEngine()) {
-      env = GCPEnv.APP_ENGINE;
+      env2 = GCPEnv.APP_ENGINE;
     } else if (isCloudFunction()) {
-      env = GCPEnv.CLOUD_FUNCTIONS;
+      env2 = GCPEnv.CLOUD_FUNCTIONS;
     } else if (await isComputeEngine()) {
       if (await isKubernetesEngine()) {
-        env = GCPEnv.KUBERNETES_ENGINE;
+        env2 = GCPEnv.KUBERNETES_ENGINE;
       } else if (isCloudRun()) {
-        env = GCPEnv.CLOUD_RUN;
+        env2 = GCPEnv.CLOUD_RUN;
       } else if (isCloudRunJob()) {
-        env = GCPEnv.CLOUD_RUN_JOBS;
+        env2 = GCPEnv.CLOUD_RUN_JOBS;
       } else {
-        env = GCPEnv.COMPUTE_ENGINE;
+        env2 = GCPEnv.COMPUTE_ENGINE;
       }
     } else {
-      env = GCPEnv.NONE;
+      env2 = GCPEnv.NONE;
     }
-    return env;
+    return env2;
   }
   function isAppEngine() {
     return !!(process.env.GAE_SERVICE || process.env.GAE_MODULE_NAME);
@@ -22358,7 +22520,7 @@ var require_googleauth = __commonJS((exports) => {
   var fs2 = __require("fs");
   var gaxios_1 = require_src2();
   var gcpMetadata = require_src4();
-  var os = __require("os");
+  var os2 = __require("os");
   var path = __require("path");
   var crypto_1 = require_crypto3();
   var computeclient_1 = require_computeclient();
@@ -22717,7 +22879,7 @@ var require_googleauth = __commonJS((exports) => {
       return new jwtclient_1.JWT({ ...options, apiKey });
     }
     _isWindows() {
-      const sys = os.platform();
+      const sys = os2.platform();
       if (sys && sys.length >= 3) {
         if (sys.substring(0, 3).toLowerCase() === "win") {
           return true;
@@ -53122,8 +53284,8 @@ var VERSION = "0.0.1";
 var checkFileSupport = () => {
   var _a;
   if (typeof File === "undefined") {
-    const { process: process3 } = globalThis;
-    const isOldNode = typeof ((_a = process3 === null || process3 === undefined ? undefined : process3.versions) === null || _a === undefined ? undefined : _a.node) === "string" && parseInt(process3.versions.node.split(".")) < 20;
+    const { process: process4 } = globalThis;
+    const isOldNode = typeof ((_a = process4 === null || process4 === undefined ? undefined : process4.versions) === null || _a === undefined ? undefined : _a.node) === "string" && parseInt(process4.versions.node.split(".")) < 20;
     throw new Error("`File` is not defined as a global, which is required for file uploads." + (isOldNode ? " Update to Node 20 LTS or newer, or set `globalThis.File` to `import('node:buffer').File`." : ""));
   }
 };
@@ -53936,13 +54098,13 @@ var buildHeaders = (newHeaders) => {
   }
   return { [brand_privateNullableHeaders]: true, values: targetHeaders, nulls: nullHeaders };
 };
-var readEnv = (env) => {
+var readEnv = (env2) => {
   var _a, _b, _c, _d, _e;
   if (typeof globalThis.process !== "undefined") {
-    return ((_b = (_a = globalThis.process.env) === null || _a === undefined ? undefined : _a[env]) === null || _b === undefined ? undefined : _b.trim()) || undefined;
+    return ((_b = (_a = globalThis.process.env) === null || _a === undefined ? undefined : _a[env2]) === null || _b === undefined ? undefined : _b.trim()) || undefined;
   }
   if (typeof globalThis.Deno !== "undefined") {
-    return ((_e = (_d = (_c = globalThis.Deno.env) === null || _c === undefined ? undefined : _c.get) === null || _d === undefined ? undefined : _d.call(_c, env)) === null || _e === undefined ? undefined : _e.trim()) || undefined;
+    return ((_e = (_d = (_c = globalThis.Deno.env) === null || _c === undefined ? undefined : _c.get) === null || _d === undefined ? undefined : _d.call(_c, env2)) === null || _e === undefined ? undefined : _e.trim()) || undefined;
   }
   return;
 };
@@ -55989,9 +56151,9 @@ class GoogleGenAI {
     this.fileSearchStores = new FileSearchStores(this.apiClient);
   }
 }
-function getEnv(env) {
+function getEnv(env2) {
   var _a2, _b, _c;
-  return (_c = (_b = (_a2 = process === null || process === undefined ? undefined : process.env) === null || _a2 === undefined ? undefined : _a2[env]) === null || _b === undefined ? undefined : _b.trim()) !== null && _c !== undefined ? _c : undefined;
+  return (_c = (_b = (_a2 = process === null || process === undefined ? undefined : process.env) === null || _a2 === undefined ? undefined : _a2[env2]) === null || _b === undefined ? undefined : _b.trim()) !== null && _c !== undefined ? _c : undefined;
 }
 function stringToBoolean(str) {
   if (str === undefined) {
@@ -56046,6 +56208,54 @@ function correctExtension(filename, mimeType) {
   const base = currentExt ? filename.slice(0, -currentExt.length) : filename;
   return `${base}.${ext}`;
 }
+var CONTENT_BLOCK_REASONS = new Set([
+  "SAFETY",
+  "IMAGE_SAFETY",
+  "PROHIBITED_CONTENT",
+  "IMAGE_PROHIBITED_CONTENT",
+  "RECITATION",
+  "IMAGE_RECITATION",
+  "BLOCKLIST",
+  "SPII"
+]);
+function getFinishReason(response) {
+  return response?.candidates?.[0]?.finishReason;
+}
+function hasImageParts(response) {
+  const parts = response?.candidates?.[0]?.content?.parts;
+  return Array.isArray(parts) && parts.length > 0;
+}
+function isContentBlock(response) {
+  const reason = getFinishReason(response);
+  return !!reason && CONTENT_BLOCK_REASONS.has(reason) || !!response?.promptFeedback?.blockReason;
+}
+function describeEmptyResponse(response) {
+  const finishReason = getFinishReason(response);
+  const blockReason = response?.promptFeedback?.blockReason;
+  const safetyRatings = response?.candidates?.[0]?.safetyRatings;
+  const details = [];
+  if (finishReason)
+    details.push(`finishReason: ${finishReason}`);
+  if (blockReason)
+    details.push(`blockReason: ${blockReason}`);
+  const message = response?.candidates?.[0]?.finishMessage || response?.promptFeedback?.blockReasonMessage;
+  if (message)
+    details.push(`message: ${message}`);
+  if (Array.isArray(safetyRatings) && safetyRatings.length > 0) {
+    details.push(`safetyRatings: ${JSON.stringify(safetyRatings)}`);
+  }
+  const suffix = details.length > 0 ? ` (${details.join(", ")})` : "";
+  if (isContentBlock(response)) {
+    return `The model refused this request on content grounds${suffix}. Reword the prompt or change the source image.`;
+  }
+  if (finishReason) {
+    return `The API returned no image${suffix}. No content block was reported, so this is a generation failure rather than a refusal — another model or another attempt usually clears it.`;
+  }
+  return `The API returned no image and gave no finishReason${suffix}. Nothing in the response explains why.`;
+}
+function isRecoverableFailure(response) {
+  return !hasImageParts(response) && !isContentBlock(response);
+}
 function ensureDir(dirPath) {
   const resolved = path2.resolve(dirPath);
   if (!fs3.existsSync(resolved)) {
@@ -56053,8 +56263,27 @@ function ensureDir(dirPath) {
   }
   return resolved;
 }
-async function generateImage(prompt, options = {}) {
+async function resolveWithRecovery(model, call) {
+  const first = await call(model);
+  if (!isRecoverableFailure(first))
+    return { response: first };
+  const second = await call(model);
+  if (!isRecoverableFailure(second))
+    return { response: second };
+  if (model === DEFAULT_MODEL) {
+    throw new Error(`${model} returned no image twice. ${describeEmptyResponse(second)}`);
+  }
+  const fallback = await call(DEFAULT_MODEL);
+  if (!hasImageParts(fallback)) {
+    throw new Error(`${model} returned no image twice (${describeEmptyResponse(second)}) ` + `then ${DEFAULT_MODEL} also returned none: ${describeEmptyResponse(fallback)}`);
+  }
+  return { response: fallback, fallbackFrom: model };
+}
+function generateWithRecovery(request) {
   const client = getClient();
+  return resolveWithRecovery(request.model, (model) => client.models.generateContent({ ...request, model }));
+}
+async function generateImage(prompt, options = {}) {
   const model = options.model || DEFAULT_MODEL;
   const outputDir = ensureDir(options.outputDir || process.cwd());
   const filename = options.filename || generateFilename(prompt);
@@ -56069,15 +56298,14 @@ async function generateImage(prompt, options = {}) {
   if (Object.keys(imageConfig).length > 0) {
     config2.imageConfig = imageConfig;
   }
-  const response = await client.models.generateContent({
+  const { response, fallbackFrom } = await generateWithRecovery({
     model,
     contents: prompt,
     config: config2
   });
-  return extractAndSaveImage(response, outputDir, filename);
+  return { ...extractAndSaveImage(response, outputDir, filename), fallbackFrom };
 }
 async function editImage(imagePath, prompt, options = {}) {
-  const client = getClient();
   const model = options.model || DEFAULT_MODEL;
   const resolvedImagePath = path2.resolve(imagePath);
   if (!fs3.existsSync(resolvedImagePath)) {
@@ -56108,21 +56336,21 @@ async function editImage(imagePath, prompt, options = {}) {
       }
     }
   ];
-  const response = await client.models.generateContent({
+  const { response, fallbackFrom } = await generateWithRecovery({
     model,
     contents,
     config: config2
   });
-  return extractAndSaveImage(response, outputDir, filename);
+  return { ...extractAndSaveImage(response, outputDir, filename), fallbackFrom };
 }
 function extractAndSaveImage(response, outputDir, filename) {
   let textResponse;
   let imageSaved = false;
   let filePath = "";
-  const parts = response?.candidates?.[0]?.content?.parts;
-  if (!parts || parts.length === 0) {
-    throw new Error("No content in API response. The model may have blocked the request due to safety filters.");
+  if (!hasImageParts(response)) {
+    throw new Error(describeEmptyResponse(response));
   }
+  const parts = response.candidates[0].content.parts;
   for (const part of parts) {
     if (part.text) {
       textResponse = part.text;
@@ -56241,8 +56469,11 @@ Example usage:
         `\uD83D\uDCCF Complexity: ${params.complexity}`,
         `\uD83D\uDDBC️ Aspect ratio: ${params.aspect_ratio}`,
         `\uD83D\uDCD0 Resolution: ${params.resolution}`,
-        `\uD83C\uDF4C Model: ${params.model}`
+        `\uD83C\uDF4C Model: ${result.fallbackFrom ? DEFAULT_MODEL : params.model}`
       ];
+      if (result.fallbackFrom) {
+        lines.push(`⚠️ Fallback: ${result.fallbackFrom} returned no image, ${DEFAULT_MODEL} produced this one`);
+      }
       if (result.textResponse) {
         lines.push(`
 \uD83D\uDCAC Model notes: ${result.textResponse}`);
@@ -56315,8 +56546,11 @@ Example usage:
         `\uD83D\uDCC1 Saved to: ${result.filePath}`,
         `\uD83D\uDCF7 Source: ${params.image_path}`,
         `\uD83D\uDCD0 Resolution: ${params.resolution}`,
-        `\uD83C\uDF4C Model: ${params.model}`
+        `\uD83C\uDF4C Model: ${result.fallbackFrom ? DEFAULT_MODEL : params.model}`
       ];
+      if (result.fallbackFrom) {
+        lines.push(`⚠️ Fallback: ${result.fallbackFrom} returned no image, ${DEFAULT_MODEL} produced this one`);
+      }
       if (params.aspect_ratio) {
         lines.push(`\uD83D\uDDBC️ Aspect ratio: ${params.aspect_ratio}`);
       }
@@ -56393,8 +56627,11 @@ Example prompts:
         `\uD83D\uDCC1 Saved to: ${result.filePath}`,
         `\uD83D\uDDBC️ Aspect ratio: ${params.aspect_ratio}`,
         `\uD83D\uDCD0 Resolution: ${params.resolution}`,
-        `\uD83C\uDF4C Model: ${params.model}`
+        `\uD83C\uDF4C Model: ${result.fallbackFrom ? DEFAULT_MODEL : params.model}`
       ];
+      if (result.fallbackFrom) {
+        lines.push(`⚠️ Fallback: ${result.fallbackFrom} returned no image, ${DEFAULT_MODEL} produced this one`);
+      }
       if (params.style) {
         lines.push(`\uD83C\uDFA8 Style: ${params.style}`);
       }
@@ -56483,6 +56720,7 @@ Example usage:
     try {
       const iconPrompt = buildIconPrompt(params);
       const generatedFiles = [];
+      let fallbackFrom;
       const maxSize = Math.max(...params.sizes);
       const resolution = maxSize >= 512 ? "1K" : "512px";
       const slug = params.prompt.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().split(/\s+/).slice(0, 3).join("_");
@@ -56498,6 +56736,8 @@ Example usage:
           filename
         });
         generatedFiles.push(result.filePath);
+        if (result.fallbackFrom)
+          fallbackFrom = result.fallbackFrom;
       }
       const lines = [
         `✅ Icons generated successfully!`,
@@ -56505,7 +56745,8 @@ Example usage:
         `\uD83C\uDFAF Type: ${params.type}`,
         `\uD83C\uDFA8 Style: ${params.style}`,
         `\uD83D\uDCD0 Sizes: ${params.sizes.map((s2) => `${s2}px`).join(", ")}`,
-        `\uD83C\uDF4C Model: ${params.model}`,
+        `\uD83C\uDF4C Model: ${fallbackFrom ? DEFAULT_MODEL : params.model}`,
+        ...fallbackFrom ? [`⚠️ Fallback: ${fallbackFrom} returned no image, ${DEFAULT_MODEL} produced at least one of these`] : [],
         ``,
         `Generated files:`,
         ...generatedFiles.map((f3) => `  • ${f3}`)

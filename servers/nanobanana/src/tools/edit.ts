@@ -90,9 +90,14 @@ Example usage:
           `📁 Saved to: ${result.filePath}`,
           `📷 Source: ${params.image_path}`,
           `📐 Resolution: ${params.resolution}`,
-          `🍌 Model: ${params.model}`,
+          `🍌 Model: ${result.fallbackFrom ? DEFAULT_MODEL : params.model}`,
         ];
 
+        if (result.fallbackFrom) {
+          lines.push(
+            `⚠️ Fallback: ${result.fallbackFrom} returned no image, ${DEFAULT_MODEL} produced this one`
+          );
+        }
         if (params.aspect_ratio) {
           lines.push(`🖼️ Aspect ratio: ${params.aspect_ratio}`);
         }
