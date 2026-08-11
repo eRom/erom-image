@@ -1,8 +1,8 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "erom-image",
-  "description": "Atelier image et document : nanobanana (Gemini) pour images, icônes et diagrammes ; GPT Image (OpenAI gpt-image-2) pour texte exact, compositions multi-images et éditions haute fidélité ; filigrane pour marquer et protéger images et PDF avant diffusion.",
-  "version": "0.3.1",
+  "description": "Atelier image et document : nanobanana (Gemini) pour images, icônes et diagrammes ; GPT Image (OpenAI gpt-image-2) pour texte exact, compositions multi-images et éditions haute fidélité ; filigrane pour marquer et protéger images et PDF avant diffusion ; qrcode pour produire et relire des QR-Codes en local.",
+  "version": "0.4.0",
   "author": {
     "name": "Romain Ecarnot",
     "url": "https://github.com/eRom"
@@ -19,7 +19,9 @@
     "gpt-image",
     "filigrane",
     "watermark",
-    "pdf"
+    "pdf",
+    "qrcode",
+    "segno"
   ],
   "skills": "./skills/",
   "mcpServers": "./.mcp.json"
