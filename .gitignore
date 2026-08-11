@@ -10,3 +10,9 @@ __pycache__/
 
 # Réceptacle caserne local (IDs Linear/Slack internes) - repo destiné à être public
 _memory_/
+
+# Images de travail à la racine, non distribuées
+tests/
+
+# Sauvegarde déposée par la skill session-profile
+.claude/settings.local.json.bak
