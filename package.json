@@ -10,7 +10,8 @@
     "build:gpt-image": "bun build servers/gpt-image/src/index.ts --target=node --outfile=plugin/servers/gpt-image/dist/index.js",
     "build:filigrane": "./scripts/vendor-filigrane.sh",
     "typecheck": "tsc --noEmit",
-    "test": "bun test && bun run test:filigrane",
+    "test": "bun test --parallel && bun run test:filigrane",
+    "test:changed": "bun test --parallel --changed",
     "test:filigrane": "uv run --project filigrane pytest -q"
   },
   "dependencies": {
