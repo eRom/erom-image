@@ -8,7 +8,7 @@ filigrane qui marque le résultat avant diffusion, et une skill de QR-Code.
 | Serveur | Modèle | Points forts |
 |---|---|---|
 | `nanobanana` | Gemini (nano-banana-2 / pro) | images, icônes multi-tailles, diagrammes techniques, itération rapide |
-| `gpt` | OpenAI `gpt-image-2` | texte exact dans l'image, maquettes UI, composition multi-images, édition haute fidélité |
+| `gpt` | OpenAI `gpt-image-2.5` (flare / sunburst) | texte exact dans l'image, maquettes UI, fond transparent, composition multi-images, édition haute fidélité |
 
 ## Filigrane
 
@@ -64,5 +64,6 @@ serveur MCP ni tool exposé.
 ## Coûts
 
 Les deux serveurs appellent des API payantes, facturées sur les clés fournies. Ordres de
-grandeur pour `gpt-image-2` en 1024×1024 : `quality: low` ≈ $0,006, `medium` ≈ $0,05,
-`high` ≈ $0,21. Les skills `filigrane` et `qrcode` ne coûtent rien.
+grandeur en 1024×1024, même tarif au token pour `gpt-image-2` et `gpt-image-2.5` :
+`quality: low` ≈ $0,006, `medium` ≈ $0,05, `high` ≈ $0,21 ; `xhigh` et `max` (2.5 uniquement)
+ne sont pas encore chiffrés. Les skills `filigrane` et `qrcode` ne coûtent rien.

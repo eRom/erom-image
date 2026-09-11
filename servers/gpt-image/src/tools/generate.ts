@@ -31,7 +31,10 @@ const GenerateInputSchema = z.object({
     .describe(
       'Image size: auto, 1024x1024, 1536x1024, 1024x1536, 2048x2048, or a custom "WIDTHxHEIGHT" (edges multiple of 16, up to 3840, ratio up to 3:1)'
     ),
-  quality: z.enum(QUALITIES).default("auto").describe("Rendering quality; use medium or high for dense text"),
+  quality: z
+    .enum(QUALITIES)
+    .default("auto")
+    .describe("Rendering quality; use medium or high for dense text; xhigh and max require a gpt-image-2.5 model"),
   output_format: z.enum(OUTPUT_FORMATS).default("png").describe("Encoding of the saved file"),
   output_compression: z
     .number()
@@ -40,7 +43,7 @@ const GenerateInputSchema = z.object({
     .max(100)
     .optional()
     .describe("Compression level 0-100, for jpeg and webp only"),
-  background: z.enum(BACKGROUNDS).optional().describe("Background handling; gpt-image-2 has no transparent mode"),
+  background: z.enum(BACKGROUNDS).optional().describe("Background handling; transparent requires png or webp output"),
   moderation: z.enum(MODERATIONS).optional().describe("Moderation strictness"),
   model: z.enum(MODELS).default(DEFAULT_MODEL).describe("OpenAI image model"),
 });
@@ -52,7 +55,8 @@ export function registerGenerateTool(server: McpServer): void {
     "gpt_image_generate",
     {
       title: "GPT Image — Generate Image",
-      description: `Generate an image from a text prompt using the OpenAI Images API (gpt-image-2).
+      description: `Generate an image from a text prompt using the OpenAI Images API
+(gpt-image-2.5-flare by default: fast, high-quality everyday generation).
 
 Strengths over other image models: accurate text rendering inside the image, UI mockups,
 posters and typographic layouts, and instruction following on precise constraints.
@@ -60,8 +64,9 @@ posters and typographic layouts, and instruction following on precise constraint
 Sizes: auto, 1024x1024, 1536x1024, 1024x1536, 2048x2048, or custom "WIDTHxHEIGHT"
 (edges multiple of 16 and up to 3840, ratio up to 3:1, 2560x1440 is the recommended
 reliability ceiling).
-Quality: low (drafts, cheapest), medium, high (dense text, small type), auto.
-Note: gpt-image-2 does not support transparent backgrounds.
+Quality: low (drafts, cheapest), medium, high (dense text, small type), xhigh and max
+(gpt-image-2.5 only, final renders), auto.
+Transparent background: background "transparent" with output_format png or webp.
 
 Prompting tips: order the prompt background/scene -> subject -> key details -> constraints.
 Put exact copy in quotes and specify typography (font style, size, colour, placement).`,

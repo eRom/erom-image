@@ -8,7 +8,7 @@ import { z } from "zod";
 
 import {
   BACKGROUNDS,
-  DEFAULT_MODEL,
+  DEFAULT_EDIT_MODEL,
   MODELS,
   OUTPUT_FORMATS,
   QUALITIES,
@@ -34,7 +34,10 @@ const EditInputSchema = z.object({
   output_dir: z.string().optional().describe("Output directory (defaults to the first image directory)"),
   filename: z.string().optional().describe("Output filename (auto-generated if omitted)"),
   size: z.string().default("auto").describe("Output size; same rules as gpt_image_generate"),
-  quality: z.enum(QUALITIES).default("auto").describe("Rendering quality"),
+  quality: z
+    .enum(QUALITIES)
+    .default("auto")
+    .describe("Rendering quality; xhigh and max require a gpt-image-2.5 model"),
   output_format: z.enum(OUTPUT_FORMATS).default("png").describe("Encoding of the saved file"),
   output_compression: z
     .number()
@@ -43,8 +46,8 @@ const EditInputSchema = z.object({
     .max(100)
     .optional()
     .describe("Compression level 0-100, for jpeg and webp only"),
-  background: z.enum(BACKGROUNDS).optional().describe("Background handling; gpt-image-2 has no transparent mode"),
-  model: z.enum(MODELS).default(DEFAULT_MODEL).describe("OpenAI image model"),
+  background: z.enum(BACKGROUNDS).optional().describe("Background handling; transparent requires png or webp output"),
+  model: z.enum(MODELS).default(DEFAULT_EDIT_MODEL).describe("OpenAI image model"),
 });
 
 type EditInput = z.infer<typeof EditInputSchema>;
@@ -55,15 +58,15 @@ export function registerEditTool(server: McpServer): void {
     {
       title: "GPT Image — Edit or Compose Images",
       description: `Edit an existing image, or compose several images into one, using the
-OpenAI Images API (gpt-image-2). Accepts 1 to 16 input images.
+OpenAI Images API (gpt-image-2.5-sunburst by default, built for editing precision).
+Accepts 1 to 16 input images.
 
 Use it for: high-fidelity retouching that must preserve identity and geometry,
 compositing subjects or styles across images, and inpainting through a mask.
 
 Prompting tips: reference inputs by index ("apply Image 2's style to Image 1's subject").
 State what must not change: "change only X, keep everything else the same", and repeat
-the preservation list on every iteration to prevent drift. gpt-image-2 always processes
-inputs at high fidelity.`,
+the preservation list on every iteration to prevent drift.`,
       inputSchema: EditInputSchema,
       annotations: {
         readOnlyHint: false,

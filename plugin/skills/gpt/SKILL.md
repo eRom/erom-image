@@ -1,14 +1,14 @@
 ---
 name: gpt
-description: "Génération et édition d'images via GPT Image MCP (OpenAI gpt-image-2) : texte exact dans l'image, maquettes UI, affiches, composition multi-images, retouche haute fidélité. Triggers: image avec du texte, affiche, poster, maquette, mockup, bannière typographiée, composer plusieurs images, retoucher en préservant."
+description: "Génération et édition d'images via GPT Image MCP (OpenAI gpt-image-2.5) : texte exact dans l'image, maquettes UI, affiches, fond transparent, composition multi-images, retouche haute fidélité. Triggers: image avec du texte, affiche, poster, maquette, mockup, bannière typographiée, sticker ou logo sur fond transparent, composer plusieurs images, retoucher en préservant."
 user-invocable: true
 ---
 
 # GPT Image MCP Skill
 
-Tu as accès à **GPT Image**, un serveur MCP branché sur l'API Images d'OpenAI (`gpt-image-2`). Il expose 2 outils : génération texte-vers-image et édition/composition d'images existantes.
+Tu as accès à **GPT Image**, un serveur MCP branché sur l'API Images d'OpenAI (`gpt-image-2.5`, en deux variantes : `flare` et `sunburst`). Il expose 2 outils : génération texte-vers-image et édition/composition d'images existantes.
 
-Ce que ce serveur fait mieux que nanobanana : **le texte rendu dans l'image est exact**, l'instruction précise est suivie, et l'édition préserve identité et géométrie. Ce qu'il fait moins bien : il est plus lent, plus cher, plafonné à un ratio 3:1 et il ne sait pas produire de fond transparent.
+Ce que ce serveur fait mieux que nanobanana : **le texte rendu dans l'image est exact**, l'instruction précise est suivie, l'édition préserve identité et géométrie, et **le fond transparent est réel** (vrai canal alpha, pas un damier peint). Ce qu'il fait moins bien : il est plus lent, plus cher et plafonné à un ratio 3:1.
 
 ---
 
@@ -40,7 +40,8 @@ Ce que ce serveur fait mieux que nanobanana : **le texte rendu dans l'image est 
 | Affiche, poster, couverture, mise en page typographique | Diagramme technique structuré (`nanobanana_diagram`) |
 | Composition de plusieurs images sources en une seule (jusqu'à 16 entrées) | Itération rapide et bon marché, exploration en volume |
 | Retouche devant préserver identité, géométrie, cadrage, lumière | Ratio au-delà de 3:1 : `8:1`, `4:1`, `1:4`, `1:8` (GPT Image plafonne à 3:1) |
-| Photo produit, packshot, rendu commercial crédible | Fond transparent souhaité, sachant que nanobanana ne le garantit pas non plus |
+| Photo produit, packshot, rendu commercial crédible | Rendu graphique riche sans texte, où l'esthétique prime sur la précision |
+| Fond transparent : sticker, logo, sujet détouré (`background: "transparent"`, sortie `png` ou `webp`) | Jamais pour un fond transparent : nanobanana ne le garantit pas |
 | Inpainting : remplacer une zone précise via un masque | Sortie au-delà de `2560x1440` : GPT Image accepte jusqu'à `3840x2160`, mais c'est au-dessus de son plafond de fiabilité conseillé |
 
 **`21:9` n'est pas un motif de routage :** il vaut 2,3333:1, donc sous le plafond de 3:1. Une bannière 21:9 portant un slogan exact reste un cas GPT Image (`2688x1152`).
@@ -49,19 +50,33 @@ Ce que ce serveur fait mieux que nanobanana : **le texte rendu dans l'image est 
 
 ---
 
+## Choix du modèle
+
+| Modèle | Pour quoi | Défaut de |
+|--------|-----------|-----------|
+| `gpt-image-2.5-flare` | Génération rapide et de qualité : le cas courant | `gpt_image_generate` |
+| `gpt-image-2.5-sunburst` | Le plus capable des deux, fait pour l'édition où la précision compte | `gpt_image_edit` |
+| `gpt-image-2` | Génération précédente, encore servie : uniquement pour reproduire un rendu produit avant le 2026-09-08 | aucun |
+
+Les trois ont **le même tarif au token** : choisir entre `flare` et `sunburst` est une question de vitesse contre précision, pas de budget. Passer `sunburst` en génération quand l'image doit être juste du premier coup (texte dense, maquette détaillée) : c'est le plus capable selon la doc OpenAI, ce n'est pas mesuré ici.
+
+Pour figer un rendu reproductible, passer le snapshot daté : `gpt-image-2.5-flare-2026-09-08`, `gpt-image-2.5-sunburst-2026-09-08` ou `gpt-image-2-2026-04-21`.
+
+---
+
 ## Défauts intelligents
 
 | Paramètre | Défaut à appliquer | Quand s'en écarter |
 |-----------|--------------------|--------------------|
-| `model` | `gpt-image-2` | Uniquement pour figer un snapshot reproductible : `gpt-image-2-2026-04-21` |
+| `model` | `gpt-image-2.5-flare` en génération, `gpt-image-2.5-sunburst` en édition | Voir « Choix du modèle » |
 | `size` | `auto` | Dès que le format de sortie est contraint (bannière, story, impression) |
-| `quality` | `auto` | `low` pour brouillon et volume ; `medium` ou `high` dès qu'il y a du texte dense ou de petits caractères |
+| `quality` | `auto` | `low` pour brouillon et volume ; `medium` ou `high` dès qu'il y a du texte dense ou de petits caractères ; `xhigh` ou `max` pour un rendu final quand `high` ne suffit pas (2.5 uniquement, coût non mesuré) |
 | `output_format` | `png` | `jpeg` ou `webp` + `output_compression` pour alléger une photo destinée au web |
 | `output_dir` | répertoire de travail courant, en absolu | Chemin explicite donné par Romain |
-| `background` | non transmis | `opaque` pour forcer un fond plein sur un sujet détouré |
+| `background` | non transmis | `transparent` pour un sticker, un logo ou un sujet détouré, avec `output_format` `png` ou `webp` ; `opaque` pour forcer un fond plein |
 | `moderation` | non transmis | `moderation: "low"` si un sujet légitime est bloqué à tort (generate uniquement) |
 
-**Le levier de coût est `quality`, pas le modèle.** `chatgpt-image-latest`, `gpt-image-1.5` et `gpt-image-1-mini` sont dépréciés depuis le 2026-06-02 et retirés de l'API le 2026-12-01 : ne jamais les proposer. Pour dépenser moins, on descend en qualité, pas en modèle.
+**Le levier de coût est `quality`, pas le modèle.** Les deux variantes 2.5 et `gpt-image-2` coûtent le même prix au token. `chatgpt-image-latest`, `gpt-image-1.5` et `gpt-image-1-mini` sont dépréciés depuis le 2026-06-02 et retirés de l'API le 2026-12-01 : ne jamais les proposer. Pour dépenser moins, on descend en qualité, pas en modèle.
 
 **Boucle de travail recommandée :** cadrer en `quality: "low"` (une image coûte ~$0,006), valider la composition, puis relancer le prompt retenu en `medium` ou `high`.
 
@@ -80,12 +95,12 @@ Génère une image à partir d'un prompt texte.
 | `output_dir` | string | non | `"./"` | Répertoire de sortie, créé s'il n'existe pas. Le défaut `"./"` est résolu dans le répertoire courant du **processus serveur MCP**, pas dans celui de la conversation : laissé tel quel, le fichier atterrit hors du projet. Toujours passer un chemin absolu. |
 | `filename` | string | non | auto | Nom du fichier ; sinon `gptimage_<slug>_<timestamp>.<ext>` |
 | `size` | string | non | `"auto"` | Preset ou `"LARGEURxHAUTEUR"` custom (voir section Tailles) |
-| `quality` | enum | non | `"auto"` | `auto` · `low` · `medium` · `high` |
+| `quality` | enum | non | `"auto"` | `auto` · `low` · `medium` · `high` · `xhigh` · `max` (les deux derniers sur 2.5 uniquement) |
 | `output_format` | enum | non | `"png"` | `png` · `jpeg` · `webp` (le `.jpg` est l'extension écrite pour `jpeg`) |
 | `output_compression` | integer | non | aucun | 0 à 100 ; ne s'applique qu'à `jpeg` et `webp` |
-| `background` | enum | non | aucun | `auto` · `opaque`. Pas de mode transparent sur gpt-image-2. |
+| `background` | enum | non | aucun | `auto` · `opaque` · `transparent` (exige `png` ou `webp`) |
 | `moderation` | enum | non | aucun | `auto` · `low` (assouplit le filtre de contenu) |
-| `model` | enum | non | `"gpt-image-2"` | `gpt-image-2` · `gpt-image-2-2026-04-21` |
+| `model` | enum | non | `"gpt-image-2.5-flare"` | `gpt-image-2.5-flare` · `gpt-image-2.5-sunburst` · `gpt-image-2`, et leurs snapshots datés |
 
 **Quand l'utiliser :** "Fais une affiche pour...", "Génère une maquette de l'écran...", "Crée un visuel avec le texte...", "Photo produit de..."
 
@@ -106,11 +121,11 @@ Génère une image à partir d'un prompt texte.
 | `output_dir` | string | non | dossier de la 1re image | Répertoire de sortie |
 | `filename` | string | non | auto | Sinon `gptimage_edit_<slug>_<timestamp>.<ext>` |
 | `size` | string | non | `"auto"` | Mêmes règles que `gpt_image_generate`. En `auto`, l'édition ne préserve pas les dimensions de la source : constaté en test réel, une source 1024x1024 éditée en `auto` est ressortie en 1254x1254. Passer une taille explicite si les dimensions de la source doivent être préservées. |
-| `quality` | enum | non | `"auto"` | `auto` · `low` · `medium` · `high` |
+| `quality` | enum | non | `"auto"` | `auto` · `low` · `medium` · `high` · `xhigh` · `max` (les deux derniers sur 2.5 uniquement) |
 | `output_format` | enum | non | `"png"` | `png` · `jpeg` · `webp` |
 | `output_compression` | integer | non | aucun | 0 à 100 ; `jpeg` et `webp` seulement |
-| `background` | enum | non | aucun | `auto` · `opaque` |
-| `model` | enum | non | `"gpt-image-2"` | `gpt-image-2` · `gpt-image-2-2026-04-21` |
+| `background` | enum | non | aucun | `auto` · `opaque` · `transparent` (exige `png` ou `webp`) |
+| `model` | enum | non | `"gpt-image-2.5-sunburst"` | `gpt-image-2.5-sunburst` · `gpt-image-2.5-flare` · `gpt-image-2`, et leurs snapshots datés |
 
 **Quand l'utiliser :** "Retouche cette photo pour...", "Mets le produit de cette image sur ce fond", "Applique le style de A au sujet de B", "Remplace la zone masquée par..."
 
@@ -118,7 +133,7 @@ Génère une image à partir d'un prompt texte.
 
 **Différences avec `gpt_image_generate` :** `image_paths` et `mask_path` en plus, `moderation` en moins.
 
-**Ce qui n'existe pas dans cette surface :** aucun réglage de fidélité d'entrée (gpt-image-2 traite toujours ses entrées en haute fidélité), aucun nombre de variantes par appel, aucun streaming. Un appel produit exactement un fichier.
+**Ce qui n'existe pas dans cette surface :** aucun réglage de fidélité d'entrée, aucun nombre de variantes par appel, aucun streaming. Un appel produit exactement un fichier.
 
 ---
 
@@ -262,13 +277,14 @@ Si le texte revient faux : ne pas relancer le même prompt à l'identique. Monte
 
 ## Coûts
 
-Ordres de grandeur par image en `1024x1024`, modèle `gpt-image-2` :
+Ordres de grandeur par image en `1024x1024`. Le tarif au token est le même pour les deux variantes 2.5 et `gpt-image-2`. En `low`, les deux générations mesurées le 2026-09-11 ont consommé exactement 196 tokens de sortie (`gpt-image-2` comme `flare`). Les chiffres `medium` et `high` viennent de `gpt-image-2` et n'ont pas été remesurés sur 2.5.
 
 | Qualité | Coût indicatif | Usage |
 |---------|----------------|-------|
 | `low` | ≈ $0,006 | Brouillons, exploration, volume |
 | `medium` | ≈ $0,05 | Livrable courant, texte lisible |
 | `high` | ≈ $0,21 | Texte dense, petits caractères, rendu final |
+| `xhigh`, `max` | non mesuré | 2.5 uniquement : rendu final exigeant, jamais en exploration |
 | `auto` | variable | Laisse le modèle décider ; à éviter quand le budget compte |
 
 Le coût croît avec la surface : `2048x2048` est quatre fois plus de pixels que la référence. Un aller-retour `low` puis `high` reste moins cher qu'un seul `high` raté.
@@ -279,7 +295,7 @@ Le coût croît avec la surface : `2048x2048` est quatre fois plus de pixels que
 
 | Limitation | Détail et contournement |
 |------------|-------------------------|
-| Pas de fond transparent | gpt-image-2 n'a pas de mode transparent et rejette une requête qui en demande un. La valeur n'est d'ailleurs pas exposée par l'outil (`background` accepte `auto` et `opaque`). Pour un détourage : sortir en `opaque` et détourer en aval, ou passer par nanobanana, dont la transparence n'est pas garantie non plus. |
+| Fond transparent : `png` ou `webp` seulement | Le `jpeg` n'a pas de canal alpha. Constaté sur un seul essai (`sunburst`, `low`) : éditer une source déjà transparente a laissé un halo coloré flou autour du sujet, invisible sur fond noir et flagrant sur fond blanc. Contrôler le résultat sur fond clair avant de livrer. |
 | Latence en `quality: "high"` | Un appel en haute qualité et grande taille peut dépasser 60 s. Si timeout, augmenter `MCP_TOOL_TIMEOUT` à `120000`. |
 | Vérification d'organisation OpenAI | Le premier usage peut échouer tant que l'organisation n'est pas vérifiée dans la console OpenAI. L'erreur API le dit explicitement ; aucun retry ne la résout. |
 | Plafond de facturation | `OpenAI API 400 (billing_hard_limit_reached)` signifie que le plafond de dépense OpenAI est atteint. Ne pas réessayer : il faut relever le plafond côté compte. |

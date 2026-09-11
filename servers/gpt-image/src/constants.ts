@@ -4,11 +4,21 @@
  */
 
 // ─── Models ──────────────────────────────────────────────────────────────────
-// gpt-image-2 only: chatgpt-image-latest, gpt-image-1.5 and gpt-image-1-mini were
-// deprecated on 2026-06-02 and are removed from the API on 2026-12-01.
-export const DEFAULT_MODEL = "gpt-image-2";
+// gpt-image-2.5 (2026-09-08) existe en deux variantes au même tarif : flare pour la
+// génération courante, sunburst pour l'édition de précision. gpt-image-2 reste servi.
+// chatgpt-image-latest, gpt-image-1.5 et gpt-image-1-mini sont dépréciés depuis le
+// 2026-06-02 et retirés de l'API le 2026-12-01 : jamais dans cette liste.
+export const DEFAULT_MODEL = "gpt-image-2.5-flare";
+export const DEFAULT_EDIT_MODEL = "gpt-image-2.5-sunburst";
 
-export const MODELS = ["gpt-image-2", "gpt-image-2-2026-04-21"] as const;
+export const MODELS = [
+  "gpt-image-2.5-flare",
+  "gpt-image-2.5-flare-2026-09-08",
+  "gpt-image-2.5-sunburst",
+  "gpt-image-2.5-sunburst-2026-09-08",
+  "gpt-image-2",
+  "gpt-image-2-2026-04-21",
+] as const;
 export type Model = (typeof MODELS)[number];
 
 // ─── Sizes ───────────────────────────────────────────────────────────────────
@@ -67,11 +77,12 @@ export function validateSize(size: string): string {
 }
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
-export const QUALITIES = ["auto", "low", "medium", "high"] as const;
+// xhigh et max n'existent que sur gpt-image-2.5. Aucune garde locale : gpt-image-2 les
+// refuse lui-même avec un 400 explicite et gratuit ("does not support quality 'xhigh'").
+export const QUALITIES = ["auto", "low", "medium", "high", "xhigh", "max"] as const;
 export const OUTPUT_FORMATS = ["png", "jpeg", "webp"] as const;
-// "transparent" is intentionally absent: the API documentation states that
-// gpt-image-2 requests using background:"transparent" fail.
-export const BACKGROUNDS = ["auto", "opaque"] as const;
+// transparent exige png ou webp. Mesuré le 2026-09-11 sur gpt-image-2 et 2.5 : alpha réel.
+export const BACKGROUNDS = ["auto", "opaque", "transparent"] as const;
 export const MODERATIONS = ["auto", "low"] as const;
 
 export type Quality = (typeof QUALITIES)[number];

@@ -1,12 +1,12 @@
 import { expect, test } from "bun:test";
-import { DEFAULT_MODEL, MODELS, validateSize } from "./constants.js";
+import { DEFAULT_EDIT_MODEL, DEFAULT_MODEL, MODELS, validateSize } from "./constants.js";
 
-test("defaults to gpt-image-2 and excludes deprecated models", () => {
-  expect(DEFAULT_MODEL).toBe("gpt-image-2");
-  expect(MODELS).toContain("gpt-image-2");
-  expect(MODELS).not.toContain("chatgpt-image-latest");
-  expect(MODELS).not.toContain("gpt-image-1.5");
-  expect(MODELS).not.toContain("gpt-image-1-mini");
+test("default models are exposed and deprecated models stay out", () => {
+  expect(MODELS).toContain(DEFAULT_MODEL);
+  expect(MODELS).toContain(DEFAULT_EDIT_MODEL);
+  for (const deprecated of ["chatgpt-image-latest", "gpt-image-1.5", "gpt-image-1-mini"]) {
+    expect(MODELS).not.toContain(deprecated);
+  }
 });
 
 test("accepts size presets", () => {
