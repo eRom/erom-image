@@ -1,5 +1,7 @@
 # erom-image
 
+![erom-image](plugin/assets/erom-image.png)
+
 Repo de développement du plugin Claude Code **erom-image** : deux serveurs MCP de génération
 d'images (nanobanana/Gemini, gpt/OpenAI) avec leurs skills, une skill de filigrane image/PDF,
 et une skill de QR-Code.

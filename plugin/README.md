@@ -1,5 +1,8 @@
 # erom-image
 
+![erom-image](assets/erom-image.png)
+
+
 Atelier image et document : deux serveurs MCP de génération d'images, une skill de
 filigrane qui marque le résultat avant diffusion, et une skill de QR-Code.
 
