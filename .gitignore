@@ -16,3 +16,4 @@ tests/
 
 # Sauvegarde déposée par la skill session-profile
 .claude/settings.local.json.bak
+.superpowers/sdd/
