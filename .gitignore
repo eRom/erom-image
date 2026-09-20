@@ -17,3 +17,6 @@ tests/
 # Sauvegarde déposée par la skill session-profile
 .claude/settings.local.json.bak
 .superpowers/sdd/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
